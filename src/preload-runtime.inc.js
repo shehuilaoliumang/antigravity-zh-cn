@@ -9,6 +9,7 @@
   }
 
   const SKIP_SELECTOR = 'textarea,input,select,[contenteditable="true"],[contenteditable=""],pre,code,kbd,samp,.monaco-editor,.monaco-mouse-cursor-text,.view-lines,.cm-editor,.cm-content,.xterm,.xterm-screen,.xterm-rows,.terminal,[data-markdown-root],.markdown-body,.markdown,.prose,[data-testid="user-input-step"],.code-line,.line-content,.code-block,[data-line-tokens],[data-ag-localization-skip],[role="tree"],[role="treeitem"]';
+  const SKIP_SELECTOR_EXCEPT_SELECT = SKIP_SELECTOR.split(',').filter(function (s) { return s !== 'select'; }).join(',');
   const SAFE_UI_SELECTOR = 'button,a,label,summary,[role="button"],[role="menuitem"],[role="menuitemcheckbox"],[role="menuitemradio"],[role="tab"],[role="option"],[role="link"],[role="tooltip"],[role="heading"],h1,h2,h3,h4,h5,h6,[role="cell"],th,td,dt,dd,legend,figcaption,.menu-item,.tab,nav,header,footer,[role="menubar"],[role="toolbar"]';
 
   function looksLikePathOrId(text) {
@@ -175,11 +176,22 @@ function isSafeGreetingName(name) {
     return false;
   }
 
+  function isSelectOptionLabel(el) {
+    if (!el) return false;
+    const tag = String(el.tagName || '').toUpperCase();
+    if (tag === 'OPTION') return true;
+    return !!(el.closest && el.closest('option'));
+  }
+
   function shouldSkipElement(el) {
     if (!el) return true;
     if (el.nodeType === 3) el = el.parentElement;
     if (!el || !el.closest) return false;
-    if (el.closest(SKIP_SELECTOR)) return true;
+    if (isSelectOptionLabel(el)) {
+      if (el.closest(SKIP_SELECTOR_EXCEPT_SELECT)) return true;
+    } else if (el.closest(SKIP_SELECTOR)) {
+      return true;
+    }
     if (el.closest && el.closest('[aria-label="File path breadcrumbs"]')) return true;
     const testid = (el.getAttribute && (el.getAttribute('data-testid') || '')) || '';
     if (/user-input|assistant-message|markdown|composer-input|chat-input/i.test(testid)) return true;
@@ -713,6 +725,38 @@ function isSafeGreetingName(name) {
   }
 
 
+
+  const LEAVING_MONTHS = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+    apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+    aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
+  };
+
+  function applyLeavingOnRules(text) {
+    const original = String(text == null ? '' : text);
+    const trimmed = original.trim();
+    const m = trimmed.match(/^(.*?)\s*Leaving on\s+([A-Za-z]+)\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?\.?$/i);
+    if (!m) return original;
+    const month = LEAVING_MONTHS[m[2].toLowerCase()];
+    if (!month) return original;
+    const day = String(Number(m[3]));
+    if (!day || Number(day) < 1 || Number(day) > 31) return original;
+    const year = m[4];
+    const leavingZh = year
+      ? ('将于 ' + year + ' 年 ' + month + ' 月 ' + day + ' 日下线。')
+      : ('将于 ' + month + ' 月 ' + day + ' 日下线。');
+    const body = String(m[1] || '').replace(/\s+/g, ' ').trim();
+    if (!body) return swapTrimmed(original, trimmed, leavingZh);
+    const bodyZh = lookupDictionary(body) || lookupDictionary(body.replace(/[.。]+$/, '')) || lookupDictionary(body.endsWith('.') ? body : body + '.');
+    if (bodyZh) {
+      const prefix = /[。]$/.test(bodyZh) ? bodyZh : bodyZh + '。';
+      return swapTrimmed(original, trimmed, prefix + leavingZh);
+    }
+    const prefix = /[.。]$/.test(body) ? body + ' ' : body + ' ';
+    return swapTrimmed(original, trimmed, prefix + leavingZh);
+  }
+
   function translateText(text, options) {
     options = options || {};
     if (text == null) return text;
@@ -736,6 +780,8 @@ function isSafeGreetingName(name) {
     if (afterPerm !== original) return afterPerm;
     const afterDanger = applyDangerDeleteRules(original);
     if (afterDanger !== original) return afterDanger;
+    const afterLeaving = applyLeavingOnRules(original);
+    if (afterLeaving !== original) return afterLeaving;
     const afterRegex = applyRegexRules(original);
     if (afterRegex !== original) return afterRegex;
     for (let i = 0; i < PREFIX_RULES.length; i++) {
@@ -765,7 +811,7 @@ function isSafeGreetingName(name) {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const tag = node.tagName;
     if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || tag === 'NOSCRIPT') return;
-    if (shouldSkipElement(node) && tag !== 'INPUT' && tag !== 'TEXTAREA') return;
+    if (shouldSkipElement(node) && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return;
 
     if (node.placeholder && (tag === 'INPUT' || tag === 'TEXTAREA' || isIsolatedUiControl(node))) {
       const translated = translateText(node.placeholder, { isolated: true });
@@ -777,7 +823,7 @@ function isSafeGreetingName(name) {
     }
     // aria-label is intentionally not rewritten by default.
 
-    if (shouldSkipElement(node)) return;
+    if (shouldSkipElement(node) && tag !== 'SELECT') return;
     if (tryRewriteCompositeEmptyState(node)) return;
     if (tryRewriteCompositeLegalNotice(node)) return;
     if (rewriteCompositeDangerDelete(node)) return;

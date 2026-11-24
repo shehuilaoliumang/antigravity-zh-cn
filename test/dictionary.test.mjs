@@ -235,7 +235,7 @@ test('screenshot shortcuts and side panel disambiguation', () => {
   }
   assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
   assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
-  assert(Object.keys(dictionary).length >= 2244, 'expected >= 2244 entries, got ' + Object.keys(dictionary).length);
+  assert(Object.keys(dictionary).length >= 2267, 'expected >= 2267 entries, got ' + Object.keys(dictionary).length);
   assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
 });
 
@@ -454,6 +454,38 @@ test('model blurbs, workspace filter, skills, danger zone, and command approval'
   assert(translateText('https://policies.google.com/privacy') === 'https://policies.google.com/privacy');
   const chat = 'No automations yet? Please wait and do not click Featured.';
   assert(translateText(chat) === chat);
+});
+
+test('model leaving-on date rule and project settings copy', () => {
+  assert(translateText('The original Gemini 4 model for advanced workflows. Leaving on Nov 30.') === 'Gemini 4 的初代型号，适用于进阶工作流。将于 11 月 30 日下线。');
+  assert(translateText('The original Gemini 4 model for advanced workflows.') === 'Gemini 4 的初代型号，适用于进阶工作流。');
+  assert(translateText('Leaving on Nov 30.') === '将于 11 月 30 日下线。');
+  assert(translateText('Leaving on Nov 30') === '将于 11 月 30 日下线。');
+  assert(translateText('Leaving on November 30, 2026.') === '将于 2026 年 11 月 30 日下线。');
+  assert(translateText('For most deep reasoning and complex problems. Leaving on Dec 1.') === '适合大多数深度推理与复杂问题。将于 12 月 1 日下线。');
+  // Unknown model body stays official English; only the dated suffix is translated.
+  assert(translateText('Some unpublished official model blurb. Leaving on Jan 15.') === 'Some unpublished official model blurb. 将于 1 月 15 日下线。');
+  assert(translateText('Manage project folders and settings.') === '管理项目文件夹和设置。');
+  assert(translateText('Manage workspace folders and settings.') === '管理工作区文件夹和设置。');
+  assert(translateText('Manage project resources and settings.') === '管理项目资源和设置。');
+  assert(translateText('Manage workspace resources and settings.') === '管理工作区资源和设置。');
+  assert(translateText('Manage project folders, agent settings, and permissions.') === '管理项目文件夹、智能体设置和权限。');
+  assert(translateText('Manage workspace folders, agent settings, and permissions.') === '管理工作区文件夹、智能体设置和权限。');
+  assert(translateText('Manage project resources, agent settings, and permissions.') === '管理项目资源、智能体设置和权限。');
+  assert(translateText('Manage workspace resources, agent settings, and permissions.') === '管理工作区资源、智能体设置和权限。');
+  assert(translateText('Add Folder') === '添加文件夹');
+  assert(translateText('+ Add Folder') === '+ 添加文件夹');
+  assert(translateText('Add Resource') === '添加资源');
+  assert(translateText('+ Add Resource') === '+ 添加资源');
+  assert(translateText('No folders added yet.') === '尚未添加文件夹。');
+  assert(translateText('No resources added yet.') === '尚未添加资源。');
+  assert(translateText('Resources') === '资源');
+  assert(translateText('Setup script') === '预置脚本');
+  assert(translateText('A project with this name already exists.') === '已存在同名项目。');
+  assert(translateText('A workspace with this name already exists.') === '已存在同名工作区。');
+  assert(translateText('Gemini 4 Argon') === 'Gemini 4 Argon');
+  assert(translateText('Gemini 4 Hydrogen') === 'Gemini 4 Hydrogen');
+  assert(translateText('C:\\Users\\demo\\Projects\\dashboard') === 'C:\\Users\\demo\\Projects\\dashboard');
 });
 
 test('informal Hey/Hi/Hello greetings with placeholder names only', () => {

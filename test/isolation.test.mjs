@@ -300,4 +300,22 @@ test('danger zone split delete copy preserves the project name', () => {
 });
 
 
+
+test('native select option labels: All Workspaces is translated, placeholder workspace names are not', () => {
+  const select = el('select', { 'data-testid': 'project-customizations-workspace-filter' });
+  assert(shouldSkipElement(select) === true);
+  const allOpt = el('option', { value: 'all' }, select);
+  const otherOpt = el('option', { value: 'ws-demo' }, select);
+  assert(shouldSkipElement(allOpt) === false);
+  assert(shouldSkipElement(otherOpt) === false);
+  assert(translateText('All Workspaces') === '所有工作区');
+  assert(translateText('Demo Workspace Alpha') === 'Demo Workspace Alpha');
+  const markdownOpt = el('option', {}, el('div', { 'data-markdown-root': '' }));
+  assert(shouldSkipElement(markdownOpt) === true);
+  const input = el('input');
+  assert(shouldSkipElement(input) === true);
+  const aria = el('option', { 'aria-label': 'All Workspaces' }, select);
+  assert(aria.getAttribute('aria-label') === 'All Workspaces');
+});
+
 export default cases;
