@@ -14,7 +14,7 @@
   function looksLikePathOrId(text) {
     const s = String(text || '').trim();
     if (!s) return false;
-    if (/https?:\/\//i.test(s) || /^file:\/\//i.test(s) || /^[\w.-]+\.[a-z]{2,}([/:?#]|$)/i.test(s)) return true;
+    if (/^(https?:\/\/|file:\/\/)/i.test(s) || /^[\w.-]+\.[a-z]{2,}([/:?#]|$)/i.test(s)) return true;
     if (/^[A-Za-z]:[\\/]/.test(s) || /^\\\\/.test(s)) return true;
     if (/(^|[\s])(\/[\w.-]+){2,}/.test(s)) return true;
     if (/^~\/[\w./-]+/.test(s)) return true;
@@ -315,6 +315,7 @@ function isSafeGreetingName(name) {
       return text.replace(trimmed, '无法' + verb + ' hooks.json：' + (m[2] || ''));
     }
     if ((m = trimmed.match(/^Failed to fetch available MCP servers:\s*(.*)$/i))) return text.replace(trimmed, '无法获取可用的 MCP 服务器：' + (m[1] || ''));
+    if ((m = trimmed.match(/^\+?\s*See (\d+) more$/i))) return text.replace(trimmed, '查看另外 ' + m[1] + ' 个');
     if ((m = trimmed.match(/^Learn more about (.+)$/i))) {
       return text.replace(trimmed, '了解更多关于 ' + translateText(m[1], { isolated: true }) + ' 的信息');
     }

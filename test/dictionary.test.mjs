@@ -235,7 +235,7 @@ test('screenshot shortcuts and side panel disambiguation', () => {
   }
   assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
   assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
-  assert(Object.keys(dictionary).length >= 2141, 'expected >= 2141 entries, got ' + Object.keys(dictionary).length);
+  assert(Object.keys(dictionary).length >= 2169, 'expected >= 2169 entries, got ' + Object.keys(dictionary).length);
   assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
 });
 
@@ -336,6 +336,41 @@ test('customizations marketplace, installed, and plugin chrome', () => {
   assert(translateText('Yes') === 'Yes');
 });
 
+
+test('marketplace shelves, see-N-more, legal notice, and plugin descriptions', () => {
+  assert(translateText('Productivity & Project Management') === '效率与项目管理');
+  assert(translateText('Plan work, track issues, sign documents, and manage your notes and files.') === '规划工作、跟踪事务、签署文档，并管理你的笔记与文件。');
+  assert(translateText('Cloud Hosting & Deployment') === '云托管与部署');
+  assert(translateText('Deploy and host your apps, sites, and their backends.') === '部署并托管你的应用、网站及其后端。');
+  assert(translateText('Business') === '商务');
+  assert(translateText('Payments, CRM, accounting, data, identity, customer support, marketing, and workflow automation.') === '支付、CRM、会计、数据、身份、客户支持、营销和工作流自动化。');
+  assert(translateText('Design, Creative & Media') === '设计、创意与媒体');
+  assert(translateText('Design, creative, and media tools.') === '设计、创意与媒体工具。');
+  assert(translateText("Build on Google's developer platforms, including Android, Chrome, Gemini, and Google Cloud.") === '基于 Google 的开发者平台进行构建，包括 Android、Chrome、Gemini 和 Google Cloud。');
+  assert(translateText('See 4 more') === '查看另外 4 个');
+  assert(translateText('See 6 more') === '查看另外 6 个');
+  assert(translateText('+ See 4 more') === '查看另外 4 个');
+  assert(translateText('See more') === '查看更多');
+  assert(translateText('See more results') === '查看更多结果');
+  assert(translateText('Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here: https://policies.google.com/privacy') === 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：https://policies.google.com/privacy');
+  assert(translateText("Teamwork Graph CLI is Atlassian's agent-first interface to your entire work context: Jira issues, Confluence pages, Bitbucket PRs, along with your connected third-party data sources.") === 'Teamwork Graph CLI 是 Atlassian 面向智能体的工作上下文接口：可连接 Jira 事务、Confluence 页面、Bitbucket PR，以及你已接入的第三方数据源。');
+  assert(translateText('Connect Antigravity to your ClickUp workspace to manage tasks, track time, and coordinate updates with your team without switching tabs.') === '将 Antigravity 连接到你的 ClickUp 工作区，以便管理任务、跟踪时间，并与团队协同更新，无需来回切换标签页。');
+  assert(translateText('Connect Antigravity to Dropbox to search and organize files and folders, inspect metadata, and turn documents into actionable context for seamless collaboration.') === '将 Antigravity 连接到 Dropbox，以便搜索和组织文件与文件夹、查看元数据，并将文档转化为可执行的上下文，实现无缝协作。');
+  assert(translateText('The product development system for teams and agents. Manage issues, projects, documents, and everything else across your Linear workspace.') === '面向团队和智能体的产品研发系统。可在 Linear 工作区中管理事务、项目、文档及其他全部内容。');
+  assert(translateText('Databricks skills for the CLI, Apps, Lakebase, Model Serving, Lakeflow Jobs, Spark Declarative Pipelines, Declarative Automation Bundles (DABs), and classic-to-serverless migration.') === '适用于 CLI、Apps、Lakebase、Model Serving、Lakeflow Jobs、Spark Declarative Pipelines、Declarative Automation Bundles（DAB）以及从经典计算迁移到无服务器的 Databricks 技能。');
+  assert(translateText('Create, edit, review, resize, and brand-check Canva designs with the Canva MCP server.') === '使用 Canva MCP 服务器创建、编辑、审阅、调整尺寸，并检查 Canva 设计是否符合品牌规范。');
+  assert(translateText('Turn Figma designs into production code, map components with Code Connect, and create or edit Figma files in Antigravity.') === '将 Figma 设计转化为生产代码，通过 Code Connect 映射组件，并在 Antigravity 中创建或编辑 Figma 文件。');
+  assert(translateText("Connect your agent to invideo's AI-native video editor. It trims, grades and mixes on a real timeline while you watch every change land.") === '将你的智能体连接到 invideo 的 AI 原生视频编辑器。它会在真实时间线上进行裁剪、调色和混音，你可以实时看到每一处改动。');
+  assert(translateText('Give your AI agent 600,000+ real app screens, and the skills to use them. Includes the Mobbin MCP and a skill that redesigns your screen from patterns real apps ship, in your own design system, with the references behind every change.') === '为你的 AI 智能体提供 600,000+ 个真实应用界面，以及使用这些界面的技能。包含 Mobbin MCP，以及一项可根据真实应用已上线的设计模式、在你自己的设计系统中重新设计界面，并为每处改动提供参考依据的技能。');
+  assert(translateText('Search Intercom conversations, contacts, and companies, spot support trends, and install the Intercom Messenger with secure identity verification.') === '搜索 Intercom 对话、联系人和公司，发现支持趋势，并安装带安全身份验证的 Intercom Messenger。');
+  assert(translateText('SEO workflows on live Semrush data: keyword research, site audits, backlinks, competitor, traffic and market analytics, PPC, and AI brand visibility.') === '基于实时 Semrush 数据的 SEO 工作流：关键词研究、网站审计、反向链接、竞争对手、流量与市场分析、PPC 以及 AI 品牌可见度。');
+  assert(translateText("Salaries, jobs & career advice. Levels.fyi is your career companion to ensure you get paid fairly and find jobs you'll love.") === '薪资、职位与职业建议。Levels.fyi 是你的职业伙伴，帮助你获得公平薪酬并找到喜爱的工作。');
+  assert(translateText('ClickUp') === 'ClickUp');
+  assert(translateText('Figma') === 'Figma');
+  assert(translateText('Stripe') === 'Stripe');
+  assert(translateText('https://policies.google.com/privacy') === 'https://policies.google.com/privacy');
+  assert(translateText('Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here: https://policies.google.com/privacy').includes('https://policies.google.com/privacy'));
+});
 
 test('informal Hey/Hi/Hello greetings with placeholder names only', () => {
   assert(translateText('Hey Alex, what should we build today?') === '你好，Alex，今天我们做点什么？');
