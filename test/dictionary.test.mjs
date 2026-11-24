@@ -235,7 +235,7 @@ test('screenshot shortcuts and side panel disambiguation', () => {
   }
   assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
   assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
-  assert(Object.keys(dictionary).length >= 2188, 'expected >= 2188 entries, got ' + Object.keys(dictionary).length);
+  assert(Object.keys(dictionary).length >= 2244, 'expected >= 2244 entries, got ' + Object.keys(dictionary).length);
   assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
 });
 
@@ -408,6 +408,51 @@ test('thinking-effort and confirmed info tooltips', () => {
   assert(translateText('https://policies.google.com/privacy') === 'https://policies.google.com/privacy');
   assert(translateText('C:\\Users\\demo\\Downloads') === 'C:\\Users\\demo\\Downloads');
   const chat = 'Please click View plans and then set Voice to Verbose if Change... is Not set.';
+  assert(translateText(chat) === chat);
+});
+
+
+test('model blurbs, workspace filter, skills, danger zone, and command approval', () => {
+  assert(translateText('For most deep reasoning and complex problems') === '适合大多数深度推理与复杂问题');
+  assert(translateText('For your hardest, long-horizon tasks') === '适合最棘手、跨度最长的任务');
+  assert(translateText('Offloads routine steps to a faster executor. Same quality, fewer tokens used.') === '将常规步骤交给更快的执行器处理。质量相同，Token 消耗更少。');
+  assert(translateText('All Workspaces') === '所有工作区');
+  assert(translateText('Global') === '全局');
+  assert(translateText('Workspace') === '工作区');
+  assert(translateText('Comprehensive guide and reference for the Antigravity Customization System. Use to explain how customizations work, their loading priority, discovery mechanisms, and to guide the creation of skills, rules, plugins, hooks, and MCP servers.') === 'Antigravity 自定义系统的综合指南与参考。用于说明自定义项的工作方式、加载优先级和发现机制，并指导创建技能、规则、插件、钩子和 MCP 服务器。');
+  assert(translateText('How to write and run a dynamic workflow script with the `run_workflow` tool: a Python script that orchestrates many agents with `agent`, `parallel`, `pipeline`, and `phase`. Use when a task splits into many independent or staged pieces of agent work (fan out over files, modules, bugs, or review angles, then aggregate), or when the user asks for a workflow. Don\'t use for a single delegated task (use a subagent) or for legacy workflow files (see migrate-workflows).').includes('`run_workflow`'));
+  assert(translateText('Guidelines for interacting with GitHub and request permissions from the user when commands fail due to restrictions in the agent environment.').includes('GitHub'));
+  assert(translateText('Delete project') === '删除项目');
+  assert(translateText('Delete Project') === '删除项目');
+  assert(translateText('Delete workspace') === '删除工作区');
+  assert(translateText('1 active conversation') === '1 个进行中的对话');
+  assert(translateText('2 active conversations') === '2 个进行中的对话');
+  assert(translateText('1 archived conversation') === '1 个已归档的对话');
+  assert(translateText('3 archived conversations') === '3 个已归档的对话');
+  assert(translateText('1 active conversation and 2 archived conversations') === '1 个进行中的对话和 2 个已归档的对话');
+  assert(translateText('Permanently delete 演示项目 including 1 active conversation.') === '将永久删除「演示项目」，其中包含 1 个进行中的对话。');
+  assert(translateText('Permanently delete 演示项目 including 2 active conversations.') === '将永久删除「演示项目」，其中包含 2 个进行中的对话。');
+  assert(translateText('This project is managed by the Nightly Digest automation and can only be deleted by deleting that automation.') === '此项目由「Nightly Digest」自动化管理，只能通过删除该自动化来删除。');
+  assert(translateText('Are you sure you want to delete the project 演示项目?') === '确定要删除项目「演示项目」吗？');
+  assert(translateText('This will permanently delete 1 active conversation within it.') === '这将永久删除其中的 1 个进行中的对话。');
+  assert(translateText('Allow list Docker containers?') === '允许列出 Docker 容器？');
+  assert(translateText('Save rule to always allow list Docker containers?') === '保存规则以始终允许列出 Docker 容器吗？');
+  assert(translateText('Allow running this command?') === '允许运行此命令？');
+  const cmd = 'docker ps -a --format "table {{.Names}}\\t{{.Image}}\\t{{.Status}}"';
+  assert(translateText("Yes, and always allow '" + cmd + "' in this conversation") === '是，并在本次对话中始终允许“' + cmd + '”');
+  assert(translateText("Yes, and always allow '" + cmd + "'") === '是，并始终允许“' + cmd + '”');
+  assert(translateText("Yes, and always allow 'npm test' in this conversation") === '是，并在本次对话中始终允许“npm test”');
+  assert(translateText("Yes, and always allow 'npm test'") === '是，并始终允许“npm test”');
+  assert(translateText('No (tell the agent what to do instead)') === '否（改告诉智能体要做什么）');
+  assert(translateText('Yes, allow this time') === '是，仅本次允许');
+  assert(translateText('Yes, allow for this task') === '是，允许用于本任务');
+  assert(translateText('Yes, always allow') === '是，始终允许');
+  assert(translateText('Yes, always allow in this project') === '是，在此项目中始终允许');
+  assert(translateText('Yes') === 'Yes');
+  assert(translateText('No') === 'No');
+  assert(translateText(cmd) === cmd);
+  assert(translateText('https://policies.google.com/privacy') === 'https://policies.google.com/privacy');
+  const chat = 'No automations yet? Please wait and do not click Featured.';
   assert(translateText(chat) === chat);
 });
 

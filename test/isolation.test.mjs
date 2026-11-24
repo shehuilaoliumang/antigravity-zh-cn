@@ -1,7 +1,7 @@
 /**
  * Minimal DOM mock to verify skip rules without a browser or jsdom dependency.
  */
-import { translateText, shouldSkipElement, shouldTranslatePlaceholder, isIsolatedUiControl, rewriteCompositeLegalNotice, LEGAL_NOTICE_ZH } from '../src/engine.mjs';
+import { translateText, shouldSkipElement, shouldTranslatePlaceholder, isIsolatedUiControl, rewriteCompositeLegalNotice, LEGAL_NOTICE_ZH, rewriteCompositePermissionOption, rewriteCompositeDangerDelete } from '../src/engine.mjs';
 
 const cases = [];
 function test(name, fn) {
@@ -255,6 +255,48 @@ test('thinking-effort tooltip text is translated; aria-label is not rewritten', 
   assert(shouldSkipElement(el('textarea')) === true);
   assert(shouldSkipElement(el('code')) === true);
   assert(translateText(effort) !== btn.getAttribute('aria-label'));
+});
+
+
+test('command approval split labels keep the command and skip isolated Yes/No', () => {
+  const cmd = 'npm test --silent';
+  const p = createNode(1, 'BUTTON');
+  const t1 = append(p, createNode(3, undefined, "Yes, and always allow '"));
+  const em = append(p, createNode(1, 'SPAN'));
+  const emt = append(em, createNode(3, undefined, cmd));
+  const t2 = append(p, createNode(3, undefined, "' in this conversation"));
+  assert(rewriteCompositePermissionOption(p) === true);
+  assert(t1.textContent.includes('是，并在本次对话中始终允许'));
+  assert(emt.textContent === cmd);
+  assert(t2.textContent.includes('”'));
+  assert(p.textContent.includes(cmd));
+  assert(translateText('Yes') === 'Yes');
+  assert(translateText('No') === 'No');
+  const code = el('code');
+  assert(shouldSkipElement(code) === true);
+  const aria = el('button', { 'aria-label': "Yes, and always allow 'npm test' in this conversation" });
+  assert(aria.getAttribute('aria-label') === "Yes, and always allow 'npm test' in this conversation");
+});
+
+test('danger zone split delete copy preserves the project name', () => {
+  const p = createNode(1, 'SPAN');
+  append(p, createNode(3, undefined, 'Permanently delete '));
+  const strong = append(p, createNode(1, 'STRONG'));
+  const name = append(strong, createNode(3, undefined, '演示项目'));
+  append(p, createNode(3, undefined, ' including '));
+  const countWrap = append(p, createNode(1, 'STRONG'));
+  const count = append(countWrap, createNode(3, undefined, '1 active conversation'));
+  append(p, createNode(3, undefined, '.'));
+  assert(rewriteCompositeDangerDelete(p) === true);
+  assert(name.textContent === '演示项目');
+  assert(p.textContent.includes('将永久删除'));
+  assert(p.textContent.includes('演示项目'));
+  assert(p.textContent.includes('1 个进行中的对话') || count.textContent === '1 个进行中的对话');
+  const btn = createNode(1, 'BUTTON');
+  append(btn, createNode(3, undefined, 'Delete '));
+  append(btn, createNode(3, undefined, 'Project'));
+  assert(rewriteCompositeDangerDelete(btn) === true);
+  assert(btn.textContent === '删除项目');
 });
 
 

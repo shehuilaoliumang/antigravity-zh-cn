@@ -439,6 +439,280 @@ function isSafeGreetingName(name) {
     return assigned;
   }
 
+
+  function nodeTextContent(node) {
+    if (!node) return '';
+    if (node.nodeType === 3) return node.textContent == null ? '' : String(node.textContent);
+    if (typeof node.textContent === 'string' && !(node.childNodes && node.childNodes.length)) return node.textContent;
+    const kids = node.childNodes || [];
+    let s = '';
+    for (let i = 0; i < kids.length; i++) s += nodeTextContent(kids[i]);
+    if (s) return s;
+    return node.textContent == null ? '' : String(node.textContent);
+  }
+
+  const ALLOW_ACTION_ZH = {
+    'list docker containers': '列出 Docker 容器',
+    'read access to this path': '读取此路径',
+    'write access to this path': '写入此路径',
+    'reading this url': '读取此网址',
+    'executing actions on this url': '在此网址执行操作',
+    'browser downloads from this site': '从此网站下载',
+    'running this command': '运行此命令',
+    'running this command outside the sandbox': '在沙箱外运行此命令',
+    'using this mcp tool': '使用此 MCP 工具',
+    'a one-time administrator (uac) elevation': '一次性管理员（UAC）提升',
+    'access to this resource': '访问此资源'
+  };
+
+  function translateAllowAction(inner) {
+    const key = String(inner || '').replace(/\s+/g, ' ').trim();
+    if (!key) return null;
+    const mapped = ALLOW_ACTION_ZH[key.toLowerCase()];
+    if (mapped) return mapped;
+    const exact = lookupDictionary(key);
+    return exact || null;
+  }
+
+  function applyAllowPromptRules(text) {
+    const original = String(text ?? '');
+    const trimmed = original.trim();
+    let m = trimmed.match(/^Allow (.+)\?$/i);
+    if (m) {
+      const zh = translateAllowAction(m[1]);
+      if (zh) return swapTrimmed(original, trimmed, '允许' + zh + '？');
+      return original;
+    }
+    m = trimmed.match(/^Save rule to always allow (.+)\?$/i);
+    if (m) {
+      const zh = translateAllowAction(m[1]);
+      if (zh) return swapTrimmed(original, trimmed, '保存规则以始终允许' + zh + '吗？');
+      return original;
+    }
+    m = trimmed.match(/^Waiting for approval to (.+)$/i);
+    if (m) {
+      const rest = m[1].replace(/\s+/g, ' ').trim();
+      const grant = rest.match(/^grant administrator access$/i);
+      if (grant) return swapTrimmed(original, trimmed, '等待批准以授予管理员访问权限');
+      const lower = rest.toLowerCase();
+      const zh = ALLOW_ACTION_ZH[lower] || lookupDictionary(rest);
+      if (zh) return swapTrimmed(original, trimmed, '等待批准以' + zh);
+    }
+    m = trimmed.match(/^Conflicts with your configured Ask permission:\s*(.*)$/i);
+    if (m) return swapTrimmed(original, trimmed, '与已配置的“询问”权限冲突：' + m[1]);
+    m = trimmed.match(/^Requires manual confirmation:\s*(.*)$/i);
+    if (m) return swapTrimmed(original, trimmed, '需要人工确认：' + m[1]);
+    return original;
+  }
+
+  function isSafePermissionCmd(cmd) {
+    const s = String(cmd ?? '');
+    if (!s || s.length > 400) return false;
+    if (/\n/.test(s)) return false;
+    return true;
+  }
+
+  function applyPermissionOptionRules(text) {
+    const original = String(text ?? '');
+    const trimmed = original.trim();
+    let m;
+    if ((m = trimmed.match(/^Yes, and always allow '([\s\S]+)' in this conversation$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      return swapTrimmed(original, trimmed, '是，并在本次对话中始终允许“' + m[1] + '”');
+    }
+    if ((m = trimmed.match(/^Yes, and always allow '([\s\S]+)'$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      return swapTrimmed(original, trimmed, '是，并始终允许“' + m[1] + '”');
+    }
+    if ((m = trimmed.match(/^Yes, save rule for '([\s\S]+)' in this conversation$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      return swapTrimmed(original, trimmed, '是，在本次对话中为“' + m[1] + '”保存规则');
+    }
+    if ((m = trimmed.match(/^Yes, save rule for '([\s\S]+)' globally$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      return swapTrimmed(original, trimmed, '是，全局为“' + m[1] + '”保存规则');
+    }
+    if ((m = trimmed.match(/^Yes, allow downloads from ([\s\S]+) in this conversation$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      return swapTrimmed(original, trimmed, '是，在本次对话中允许从 ' + m[1] + ' 下载');
+    }
+    if ((m = trimmed.match(/^Yes, allow downloads from ([\s\S]+) for this run$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      return swapTrimmed(original, trimmed, '是，在本次运行中允许从 ' + m[1] + ' 下载');
+    }
+    if ((m = trimmed.match(/^Yes, always allow downloads from ([\s\S]+)$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      return swapTrimmed(original, trimmed, '是，始终允许从 ' + m[1] + ' 下载');
+    }
+    if ((m = trimmed.match(/^Yes, allow ([\s\S]+) in this conversation$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      if (/^for this conversation$|^this time$|^this download$|^for this task$/i.test(m[1].trim())) return original;
+      return swapTrimmed(original, trimmed, '是，在本次对话中允许 ' + m[1]);
+    }
+    if ((m = trimmed.match(/^Yes, always allow ([\s\S]+)$/))) {
+      if (!isSafePermissionCmd(m[1])) return original;
+      if (/^in this project$|^in this conversation$/i.test(m[1].trim())) return original;
+      return swapTrimmed(original, trimmed, '是，始终允许 ' + m[1]);
+    }
+    return original;
+  }
+
+  function applyDangerDeleteRules(text) {
+    const original = String(text ?? '');
+    const trimmed = original.trim();
+    let m;
+    if ((m = trimmed.match(/^Delete (project|workspace)$/i))) {
+      return swapTrimmed(original, trimmed, m[1].toLowerCase() === 'workspace' ? '删除工作区' : '删除项目');
+    }
+    if ((m = trimmed.match(/^(\d+) active conversations? and (\d+) archived conversations?$/i))) {
+      return swapTrimmed(original, trimmed, m[1] + ' 个进行中的对话和 ' + m[2] + ' 个已归档的对话');
+    }
+    if ((m = trimmed.match(/^(\d+) archived conversations? and (\d+) active conversations?$/i))) {
+      return swapTrimmed(original, trimmed, m[1] + ' 个已归档的对话和 ' + m[2] + ' 个进行中的对话');
+    }
+    if ((m = trimmed.match(/^(\d+) active conversations?$/i))) {
+      return swapTrimmed(original, trimmed, m[1] + ' 个进行中的对话');
+    }
+    if ((m = trimmed.match(/^(\d+) archived conversations?$/i))) {
+      return swapTrimmed(original, trimmed, m[1] + ' 个已归档的对话');
+    }
+    if ((m = trimmed.match(/^Permanently delete\s+(.+?)\s+including\s+(.+)\s*\.$/i))) {
+      const name = m[1].trim();
+      const counts = applyDangerDeleteRules(m[2].trim());
+      const countZh = counts === m[2].trim() ? m[2].trim() : counts;
+      return swapTrimmed(original, trimmed, '将永久删除「' + name + '」，其中包含 ' + countZh + '。');
+    }
+    if ((m = trimmed.match(/^Permanently delete\s+(.+?)\s*\.$/i))) {
+      return swapTrimmed(original, trimmed, '将永久删除「' + m[1].trim() + '」。');
+    }
+    if ((m = trimmed.match(/^This (project|workspace) is managed by the (.+) automation and can only be deleted by deleting that automation\.$/i))) {
+      const kind = m[1].toLowerCase() === 'workspace' ? '工作区' : '项目';
+      return swapTrimmed(original, trimmed, '此' + kind + '由「' + m[2].trim() + '」自动化管理，只能通过删除该自动化来删除。');
+    }
+    if ((m = trimmed.match(/^Are you sure you want to delete the (project|workspace)\s+(.+)\?$/i))) {
+      const kind = m[1].toLowerCase() === 'workspace' ? '工作区' : '项目';
+      return swapTrimmed(original, trimmed, '确定要删除' + kind + '「' + m[2].trim() + '」吗？');
+    }
+    if ((m = trimmed.match(/^This will permanently delete\s+(.+)\s+within it\.$/i))) {
+      const counts = applyDangerDeleteRules(m[1].trim());
+      const countZh = counts === m[1].trim() ? m[1].trim() : counts;
+      return swapTrimmed(original, trimmed, '这将永久删除其中的 ' + countZh + '。');
+    }
+    if ((m = trimmed.match(/^(.+): ([\d,]+) tokens$/))) {
+      return swapTrimmed(original, trimmed, m[1] + ': ' + m[2] + ' tokens');
+    }
+    return original;
+  }
+
+  function collectTextNodesForComposite(el) {
+    const nodes = [];
+    function walk(node) {
+      if (!node) return;
+      if (node.nodeType === 3) {
+        nodes.push(node);
+        return;
+      }
+      if (node.nodeType !== 1) return;
+      const kids = node.childNodes || [];
+      for (let i = 0; i < kids.length; i++) walk(kids[i]);
+    }
+    walk(el);
+    return nodes;
+  }
+
+  function rewriteCompositePermissionOption(el) {
+    if (!el || shouldSkipElement(el)) return false;
+    const raw = nodeTextContent(el);
+    const translated = applyPermissionOptionRules(raw);
+    if (!translated || translated === raw) {
+      const trimmed = raw.trim();
+      const next = applyPermissionOptionRules(trimmed);
+      if (!next || next === trimmed) return false;
+    }
+    const nodes = collectTextNodesForComposite(el);
+    if (!nodes.length) return false;
+    if (nodes.length === 1) {
+      const next = applyPermissionOptionRules(nodes[0].textContent || '');
+      if (next !== (nodes[0].textContent || '')) {
+        nodes[0].textContent = next;
+        return true;
+      }
+      return false;
+    }
+    // Typical M4 split: prefix text + command + suffix text
+    const prefixNode = nodes[0];
+    const suffixNode = nodes[nodes.length - 1];
+    const prefix = String(prefixNode.textContent || '');
+    const suffix = String(suffixNode.textContent || '');
+    const cmdNodes = nodes.slice(1, -1);
+    const cmd = cmdNodes.map((n) => n.textContent || '').join('');
+    const combined = prefix + cmd + suffix;
+    const next = applyPermissionOptionRules(combined);
+    if (next === combined) return false;
+    // Rebuild around the preserved command
+    const quoted = '“' + cmd + '”';
+    const at = next.indexOf(quoted);
+    if (at === -1) return false;
+    prefixNode.textContent = next.slice(0, at + 1); // include opening quote
+    suffixNode.textContent = next.slice(at + quoted.length - 1); // include closing quote
+    return true;
+  }
+
+  function rewriteCompositeDangerDelete(el) {
+    if (!el || shouldSkipElement(el)) return false;
+    const raw = nodeTextContent(el);
+    const collapsed = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (!collapsed) return false;
+
+    // Button / label: "Delete " + "Project"/"Workspace"
+    if (/^Delete (project|workspace)$/i.test(collapsed)) {
+      const next = applyDangerDeleteRules(collapsed);
+      if (next && next !== collapsed) {
+        const nodes = collectTextNodesForComposite(el);
+        if (!nodes.length) return false;
+        nodes[0].textContent = next;
+        for (let i = 1; i < nodes.length; i++) nodes[i].textContent = '';
+        return true;
+      }
+    }
+
+    const next = applyDangerDeleteRules(collapsed);
+    if (next && next !== collapsed) {
+      const nodes = collectTextNodesForComposite(el);
+      if (!nodes.length) return false;
+      // Preserve a strong/name or counts node if present: put Chinese around it when pattern uses 「name」
+      const nameMatch = collapsed.match(/^Permanently delete (.+?) including (.+)\.$/i)
+        || collapsed.match(/^Permanently delete (.+)\.$/i)
+        || collapsed.match(/^Are you sure you want to delete the (?:project|workspace)\s+(.+)\?$/i)
+        || collapsed.match(/^This (?:project|workspace) is managed by the (.+) automation and can only be deleted by deleting that automation\.$/i);
+      if (nameMatch && nodes.length >= 2 && next.includes('「') && next.includes('」')) {
+        const open = next.indexOf('「');
+        const close = next.indexOf('」');
+        // first significant text before name, last after name; keep inner name/count nodes
+        let assigned = false;
+        let afterName = false;
+        // Heuristic: first non-empty text gets prefix including 「, last gets suffix from 」
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        first.textContent = next.slice(0, open + 1);
+        last.textContent = next.slice(close);
+        // Translate count nodes if they look like conversation counts; leave project names
+        for (let i = 1; i < nodes.length - 1; i++) {
+          const val = String(nodes[i].textContent || '').trim();
+          const countZh = applyDangerDeleteRules(val);
+          if (countZh !== val) nodes[i].textContent = countZh;
+          // leave names untouched
+        }
+        return true;
+      }
+      nodes[0].textContent = next;
+      for (let i = 1; i < nodes.length; i++) nodes[i].textContent = '';
+      return true;
+    }
+    return false;
+  }
+
+
   function translateText(text, options) {
     options = options || {};
     if (text == null) return text;
@@ -456,6 +730,12 @@ function isSafeGreetingName(name) {
     if (afterEmpty !== original) return afterEmpty;
     const afterLegal = applyLegalNoticeRules(original);
     if (afterLegal !== original) return afterLegal;
+    const afterAllow = applyAllowPromptRules(original);
+    if (afterAllow !== original) return afterAllow;
+    const afterPerm = applyPermissionOptionRules(original);
+    if (afterPerm !== original) return afterPerm;
+    const afterDanger = applyDangerDeleteRules(original);
+    if (afterDanger !== original) return afterDanger;
     const afterRegex = applyRegexRules(original);
     if (afterRegex !== original) return afterRegex;
     for (let i = 0; i < PREFIX_RULES.length; i++) {
@@ -500,6 +780,8 @@ function isSafeGreetingName(name) {
     if (shouldSkipElement(node)) return;
     if (tryRewriteCompositeEmptyState(node)) return;
     if (tryRewriteCompositeLegalNotice(node)) return;
+    if (rewriteCompositeDangerDelete(node)) return;
+    if (rewriteCompositePermissionOption(node)) return;
     const children = node.childNodes;
     for (let i = 0; i < children.length; i++) processNode(children[i]);
   }
