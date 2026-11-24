@@ -2,6 +2,8 @@
 
 面向 **Google Antigravity Desktop 2.35.0** 的开源简体中文汉化补丁。
 
+> **开源出处说明**：本项目的基础词库（676 条）与部分基础菜单映射衍生自 [MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)（MIT License），在此基础上针对 2.35.0 重构了防误译隔离引擎、补齐 13 个原生壳层模块与 444 条新词条。完整版权与协议声明见下方「出处声明与致谢」、[LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
 本仓库只包含词库、运行时引擎和补丁工具，**不包含**任何 Antigravity 原版代码、`app.asar` 或 Electron 二进制。所有路径都在运行时解析（Windows 默认 `%LOCALAPPDATA%\Programs\Antigravity`，也可用 `--app-dir` 指定）。
 
 这不是 Google 官方产品，也与 Google 没有任何从属或背书关系。Antigravity 及相关商标归其权利人所有。本项目仅供个人学习与中文本地化辅助使用。
@@ -106,3 +108,15 @@ node test/run.mjs
 - 本项目为社区开源本地化辅助工具，非 Google 官方产品。
 - 修改安装目录内文件可能影响应用更新、完整性校验或稳定性；请先备份，风险自负。
 - 请遵守 Antigravity 的使用条款。请勿再分发任何官方专有二进制或源码。
+
+## 出处声明与致谢
+
+- **[MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)**（MIT License，`Copyright (c) 2026 Antigravity-zh Contributors`）
+  - 本项目 `src/dictionary.json` 中 676 条基础译文（668 条原样沿用、8 条润色）及 36 条基础原生菜单映射承接自该项目的 `Antigravity-Patcher.py`。
+  - 其余 444 条 2.35.0 词条、19 条新增菜单项、13 个主进程/原生壳层文件的 72 处锚点译文、模块化 DOM 隔离引擎、`patch.mjs` / `install.ps1` / `restore.ps1` 与自动化测试均为本仓库独立编写。
+  - 完整上游 MIT 协议原文见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- 感谢 Antigravity 中文汉化社区公开分享的防误译隔离实践（如避开 Markdown 正文、代码编辑器、输入框与 `aria-label` 等通用思路）；本仓库未复制其他社区仓库的源码或词库文件。
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE) 开源，并完整保留上游项目的 MIT 版权声明（详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)）。
