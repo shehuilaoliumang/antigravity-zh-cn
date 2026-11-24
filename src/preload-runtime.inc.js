@@ -217,6 +217,7 @@ function isSafeGreetingName(name) {
     items: '还没有条目',
     plugins: '还没有插件',
     customizations: '还没有自定义项',
+    'skills or rules': '还没有技能或规则',
     'custom agents': '暂无自定义智能体',
     'mcp servers': '暂无 MCP 服务器',
     'archived conversations': '暂无已归档的对话',
@@ -298,6 +299,22 @@ function isSafeGreetingName(name) {
     if (/^Waiting for user input$/i.test(trimmed)) return text.replace(trimmed, '等待用户输入');
     if (/^(?:No|否)\s+projects?\s+found\.?$/i.test(trimmed) || trimmed === 'No projects found') return text.replace(trimmed, '暂无项目');
     if (/^No\s+Project$/i.test(trimmed)) return text.replace(trimmed, '无项目');
+    if ((m = trimmed.match(/^Finish signing in to(?:\s+(.+?))?(?:\s+in your browser\.)?$/i))) {
+      var name = (m[1] || '').trim();
+      if (name && /in your browser\.$/i.test(trimmed)) return text.replace(trimmed, '请在浏览器中完成 ' + name + ' 的登录。');
+      if (name) return text.replace(trimmed, '完成 ' + name + ' 的登录');
+      return text.replace(trimmed, '完成登录');
+    }
+    if ((m = trimmed.match(/^Included by\s+(.+)$/i))) return text.replace(trimmed, '包含于 ' + m[1]);
+    if ((m = trimmed.match(/^Installed in\s+(.+)$/i))) return text.replace(trimmed, '安装于 ' + m[1]);
+    if ((m = trimmed.match(/^No MCP servers found for\s+[\u201c"'](.+?)[\u201d"']$/i))) return text.replace(trimmed, '没有找到与“' + m[1] + '”匹配的 MCP 服务器');
+    if ((m = trimmed.match(/^Are you sure you want to delete the hook "(.+)"\?$/i))) return text.replace(trimmed, '确定要删除钩子“' + m[1] + '”吗？');
+    if ((m = trimmed.match(/^(\d+) MCP servers failed to start$/i))) return text.replace(trimmed, m[1] + ' 个 MCP 服务器启动失败');
+    if ((m = trimmed.match(/^Failed to (load|read|save|write) hooks\.json:\s*(.*)$/i))) {
+      var verb = { load: '加载', read: '读取', save: '保存', write: '写入' }[m[1].toLowerCase()];
+      return text.replace(trimmed, '无法' + verb + ' hooks.json：' + (m[2] || ''));
+    }
+    if ((m = trimmed.match(/^Failed to fetch available MCP servers:\s*(.*)$/i))) return text.replace(trimmed, '无法获取可用的 MCP 服务器：' + (m[1] || ''));
     if ((m = trimmed.match(/^Learn more about (.+)$/i))) {
       return text.replace(trimmed, '了解更多关于 ' + translateText(m[1], { isolated: true }) + ' 的信息');
     }

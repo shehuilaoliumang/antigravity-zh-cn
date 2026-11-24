@@ -235,7 +235,7 @@ test('screenshot shortcuts and side panel disambiguation', () => {
   }
   assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
   assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
-  assert(Object.keys(dictionary).length >= 1970, 'expected >= 1970 entries, got ' + Object.keys(dictionary).length);
+  assert(Object.keys(dictionary).length >= 2141, 'expected >= 2141 entries, got ' + Object.keys(dictionary).length);
   assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
 });
 
@@ -281,6 +281,59 @@ test('marketplace featured and workspace plugin copy', () => {
   assert(translateText('Search, read, draft, and send emails in Gmail.') === '在 Gmail 中搜索、阅读、起草和发送邮件。');
   assert(translateText("Up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your coding agent's context.") === '最新文档查询。可从源仓库直接拉取特定版本的文档和代码示例，放入编码智能体的上下文中。');
   assert(translateText('Context7') === 'Context7');
+});
+
+test('customizations marketplace, installed, and plugin chrome', () => {
+  assert(translateText('Filter plugins') === '筛选插件');
+  assert(translateText('Category') === '分类');
+  assert(translateText('Clear category') === '清除分类');
+  assert(translateText('More Plugins') === '更多插件');
+  assert(translateText('Most popular first') === '最热门优先');
+  assert(translateText('Marketplace notice') === '插件市场通知');
+  assert(translateText('Apps') === '应用');
+  assert(translateText('Apps connected to your account') === '已连接到你账户的应用');
+  assert(translateText('Search...') === '搜索...');
+  assert(translateText('See more') === '查看更多');
+  assert(translateText('No plugins available.') === '暂无可用插件。');
+  assert(translateText('No plugins match your search.') === '没有与搜索匹配的插件。');
+  assert(translateText('No customizations match your search.') === '没有与搜索匹配的自定义项。');
+  assert(translateText('No skills or rules yet.') === '还没有技能或规则。');
+  assert(translateText('No skills or rules') === 'No skills or rules'); // incomplete fragment stays
+  assert(translateText('No apps connected yet. Connect one from Marketplace.') === '还没有已连接的应用。请从插件市场连接一个。');
+  assert(translateText('No description available.') === '暂无简介。');
+  assert(translateText('Add anyway') === '仍要添加');
+  assert(translateText('Review contents') === '审阅内容');
+  assert(translateText('Add bundle') === '添加捆绑包');
+  assert(translateText('Remove bundle') === '移除捆绑包');
+  assert(translateText('Create plugin') === '创建插件');
+  assert(translateText('Open plugin page') === '打开插件页面');
+  assert(translateText('+ Add Hook') === '+ 添加钩子');
+  assert(translateText('Sign in required') === '需要登录');
+  assert(translateText('Ready') === '就绪');
+  assert(translateText('Blocked') === '已阻止');
+  assert(translateText('Curated sets of plugins for common workflows and roles.') === '面向常见工作流和角色的精选插件集合。');
+  assert(translateText('Find plugins - bundles of skills, agents, MCP servers, UI extensions and more, and install them in one click.') === '查找插件——集技能、智能体、MCP 服务器、UI 扩展等为一体的捆绑包，可一键安装。');
+  assert(translateText('Install this plugin to see the commands it adds, along with its skills, agents and MCP servers.') === '安装此插件后，即可查看它添加的命令及其技能、智能体和 MCP 服务器。');
+  assert(translateText('Sign in to an app once and your agent can use it on any device. Open an app to see the account it uses or to disconnect it.') === '应用只需登录一次，之后智能体即可在任何设备上使用。打开应用可查看所用账户或断开连接。');
+  assert(translateText('This plugin requires authentication before the agent can use its tools.') === '智能体使用此插件的工具前，需要先完成认证。');
+  assert(translateText('This skill came from the marketplace, so you can add it again whenever you need it.') === '此技能来自插件市场，需要时可以随时再次添加。');
+  assert(translateText('Finish signing in to Gmail in your browser.') === '请在浏览器中完成 Gmail 的登录。');
+  assert(translateText('Finish signing in to') === '完成登录');
+  assert(translateText('in your browser.') === '请在浏览器中进行。');
+  assert(translateText('Included by Science Pack') === '包含于 Science Pack');
+  assert(translateText('Installed in Workspace') === '安装于 Workspace');
+  assert(translateText('No MCP servers found for "git"') === '没有找到与“git”匹配的 MCP 服务器');
+  assert(translateText('No MCP servers found for “git”') === '没有找到与“git”匹配的 MCP 服务器');
+  assert(translateText('3 MCP servers failed to start') === '3 个 MCP 服务器启动失败');
+  assert(translateText('MCP server failed to start') === 'MCP 服务器启动失败');
+  assert(translateText('Are you sure you want to delete the hook "demo"?') === '确定要删除钩子“demo”吗？');
+  assert(translateText('Failed to load hooks.json: EACCES') === '无法加载 hooks.json：EACCES');
+  assert(translateText('Failed to fetch available MCP servers: timeout') === '无法获取可用的 MCP 服务器：timeout');
+  assert(translateText('Loading customizations...') === '正在加载自定义项...');
+  assert(translateText('by Google') === '由 Google 提供');
+  // short Yes/No still must not be rewritten unless isolated
+  assert(translateText('No') === 'No');
+  assert(translateText('Yes') === 'Yes');
 });
 
 
