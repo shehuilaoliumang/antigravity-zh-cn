@@ -126,8 +126,8 @@ test('screenshot 5-6 keyboard shortcut names', () => {
   const expect = {
     'Move Conversation Up': '上移对话',
     'Move Conversation Down': '下移对话',
-    'Previous Side Panel Tab': '上一个侧边栏标签',
-    'Next Side Panel Tab': '下一个侧边栏标签',
+    'Previous Side Panel Tab': '上一个侧边面板标签',
+    'Next Side Panel Tab': '下一个侧边面板标签',
     'Open Keyboard Shortcuts': '打开键盘快捷键',
     'Submit Prompt (Alternate to Enter)': '提交提示（Enter 的备选快捷键）',
     'Enter always submits. This adds a second shortcut.': 'Enter 始终用于提交。此项会额外添加一个快捷键。',
@@ -141,7 +141,7 @@ test('screenshot 5-6 keyboard shortcut names', () => {
     'Find in Conversation': '在对话中查找',
     'Previous Conversation': '上一个对话',
     'Next Conversation': '下一个对话',
-    'Toggle Side Panel': '切换侧边栏',
+    'Toggle Side Panel': '切换侧边面板',
     'Focus Terminal': '聚焦终端',
     'Toggle Voice Mode': '切换语音模式',
     'Start Dictation': '开始听写',
@@ -199,6 +199,44 @@ test('screenshot 9 dynamic welcome greetings use placeholder names only', () => 
   assert(translateText('. Where should we pick up?') === '。从哪里继续？');
   assert(applyGreetingRules('Welcome back, Alex. What would you like to work on?') === '欢迎回来，Alex。你想做些什么？');
   assert(applyGreetingRules('Welcome back, C:\\Users\\demo\\Downloads. Where should we pick up?') === 'Welcome back, C:\\Users\\demo\\Downloads. Where should we pick up?');
+});
+
+
+test('screenshot shortcuts and side panel disambiguation', () => {
+  const expect = {
+    'Comment on Selection': '对选中内容添加批注',
+    'Side Question Selection': '对选中内容发起旁路提问',
+    'Split Conversation Horizontally': '水平拆分对话',
+    'Split Conversation Vertically': '垂直拆分对话',
+    'Pin / Unpin Conversation': '置顶 / 取消置顶对话',
+    'Archive This Conversation': '归档当前对话',
+    'Toggle Maximize Side Panel': '切换最大化侧边面板',
+    'Toggle Overview Panel': '切换概览面板',
+    'Toggle Terminal': '切换终端',
+    'New Terminal Tab': '新建终端标签页',
+    'Toggle Sidebar': '切换侧边栏',
+    'Toggle Side Panel': '切换侧边面板',
+    'Previous Side Panel Tab': '上一个侧边面板标签',
+    'Next Side Panel Tab': '下一个侧边面板标签',
+    'Equalize Split Panes': '均分拆分窗格',
+    'Open Command Palette': '打开命令面板',
+    'Enter to send': '按 Enter 发送',
+    'Keybinding Scheme': '快捷键方案',
+    'Model Quota': '模型配额',
+    'Enable terminal sandbox': '启用终端沙箱',
+    'Orchestrator Settings': '编排器设置',
+    'Stop All Subagents': '停止全部子智能体',
+    'Delete Side Question': '删除旁路提问',
+    'Search Conversations': '搜索对话',
+    'Connect to SSH Host…': '连接到 SSH 主机…',
+  };
+  for (const [en, zh] of Object.entries(expect)) {
+    assert(translateText(en) === zh, en + ' => ' + translateText(en) + ' (expected ' + zh + ')');
+  }
+  assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
+  assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
+  assert(Object.keys(dictionary).length >= 1900, 'expected >= 1900 entries, got ' + Object.keys(dictionary).length);
+  assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
 });
 
 export default cases;
