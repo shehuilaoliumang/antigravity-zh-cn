@@ -235,7 +235,7 @@ test('screenshot shortcuts and side panel disambiguation', () => {
   }
   assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
   assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
-  assert(Object.keys(dictionary).length >= 2169, 'expected >= 2169 entries, got ' + Object.keys(dictionary).length);
+  assert(Object.keys(dictionary).length >= 2173, 'expected >= 2173 entries, got ' + Object.keys(dictionary).length);
   assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
 });
 
@@ -370,6 +370,16 @@ test('marketplace shelves, see-N-more, legal notice, and plugin descriptions', (
   assert(translateText('Stripe') === 'Stripe');
   assert(translateText('https://policies.google.com/privacy') === 'https://policies.google.com/privacy');
   assert(translateText('Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here: https://policies.google.com/privacy').includes('https://policies.google.com/privacy'));
+  assert(translateText('Developer Tools') === '开发者工具');
+  assert(translateText('APIs, services, and tools to build, test, secure, and run your apps.') === '用于构建、测试、保护和运行应用的 API、服务与工具。');
+  assert(translateText('Science') === '科学');
+  assert(translateText('Agent skills, databases, and interactive viewers for scientific research.') === '面向科学研究的智能体技能、数据库与交互式查看器。');
+  assert(translateText('Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here:') === 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：');
+  assert(translateText('Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here') === 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：');
+  const legalWrapped = 'Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here: https://policies.google.com/privacy'.replace('Policy, found here:', 'Policy,\n  found here:');
+  assert(translateText(legalWrapped) === 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：https://policies.google.com/privacy');
+  const legalBodyWrapped = '\n  ' + 'Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here:'.replace('Policy, found here:', 'Policy,\nfound here:') + '\n';
+  assert(translateText(legalBodyWrapped) === '\n  ' + 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：' + '\n');
 });
 
 test('informal Hey/Hi/Hello greetings with placeholder names only', () => {

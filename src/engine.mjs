@@ -496,6 +496,105 @@ export function applyRegexRules(text) {
   return text;
 }
 
+
+const LEGAL_NOTICE_BODY_EN = 'Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here';
+export const LEGAL_NOTICE_ZH = 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：';
+const PRIVACY_POLICY_HREF_RE = /^https?:\/\/policies\.google\.com\/privacy\/?$/i;
+const LEGAL_NOTICE_BANNED_TAGS = new Set(['BUTTON', 'INPUT', 'TEXTAREA', 'SELECT', 'IMG', 'VIDEO', 'SVG', 'CANVAS', 'IFRAME', 'CODE', 'PRE']);
+
+function nodeTextContent(node) {
+  if (!node) return '';
+  if (node.nodeType === 3) return node.textContent == null ? '' : String(node.textContent);
+  if (typeof node.textContent === 'string' && !(node.childNodes && node.childNodes.length)) return node.textContent;
+  const kids = node.childNodes || [];
+  let s = '';
+  for (let i = 0; i < kids.length; i++) s += nodeTextContent(kids[i]);
+  if (s) return s;
+  return node.textContent == null ? '' : String(node.textContent);
+}
+
+function isPrivacyPolicyAnchor(el) {
+  if (!el || String(el.tagName || '').toUpperCase() !== 'A') return false;
+  const href = ((el.getAttribute && el.getAttribute('href')) || el.href || '').trim();
+  return PRIVACY_POLICY_HREF_RE.test(href);
+}
+
+export function isLegalNoticeText(text) {
+  let collapsed = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!collapsed || !/third party developer tools/i.test(collapsed)) return false;
+  collapsed = collapsed.replace(/\s+(https?:\/\/policies\.google\.com\/privacy\/?)\.?$/i, '');
+  collapsed = collapsed.replace(/[:：.\s]+$/, '');
+  return collapsed.toLowerCase() === LEGAL_NOTICE_BODY_EN.toLowerCase();
+}
+
+export function applyLegalNoticeRules(text) {
+  const original = String(text ?? '');
+  const trimmed = original.trim();
+  if (!isLegalNoticeText(trimmed)) return original;
+  const collapsed = trimmed.replace(/\s+/g, ' ');
+  const um = collapsed.match(/\s+(https?:\/\/policies\.google\.com\/privacy\/?)\.?$/i);
+  const zh = um ? LEGAL_NOTICE_ZH + um[1].replace(/\/$/, '') : LEGAL_NOTICE_ZH;
+  return swapTrimmed(original, trimmed, zh);
+}
+
+function legalNoticeShapeOk(el) {
+  if (!el) return false;
+  let ok = true;
+  function walk(node) {
+    if (!ok || !node) return;
+    if (node.nodeType !== 1) return;
+    const tag = String(node.tagName || '').toUpperCase();
+    if (LEGAL_NOTICE_BANNED_TAGS.has(tag)) {
+      ok = false;
+      return;
+    }
+    if (tag === 'A' && !isPrivacyPolicyAnchor(node)) {
+      ok = false;
+      return;
+    }
+    const kids = node.childNodes || [];
+    for (let i = 0; i < kids.length; i++) walk(kids[i]);
+  }
+  const kids = el.childNodes || [];
+  for (let i = 0; i < kids.length; i++) walk(kids[i]);
+  return ok;
+}
+
+export function rewriteCompositeLegalNotice(el) {
+  if (!el || shouldSkipElement(el)) return false;
+  if (!legalNoticeShapeOk(el)) return false;
+  const combined = nodeTextContent(el);
+  if (!isLegalNoticeText(combined)) return false;
+
+  const textNodes = [];
+  function collect(node) {
+    if (!node) return;
+    if (node.nodeType === 3) {
+      const parentTag = String((node.parentElement && node.parentElement.tagName) || '').toUpperCase();
+      if (parentTag !== 'A') textNodes.push(node);
+      return;
+    }
+    if (node.nodeType === 1 && String(node.tagName || '').toUpperCase() === 'A') return;
+    const kids = node.childNodes || [];
+    for (let i = 0; i < kids.length; i++) collect(kids[i]);
+  }
+  collect(el);
+
+  if (!textNodes.length) return false;
+  let assigned = false;
+  for (const n of textNodes) {
+    const raw = n.textContent == null ? '' : String(n.textContent);
+    if (!assigned && raw.replace(/\s+/g, ' ').trim()) {
+      const leading = (raw.match(/^\s*/) || [''])[0];
+      n.textContent = leading + LEGAL_NOTICE_ZH;
+      assigned = true;
+    } else {
+      n.textContent = '';
+    }
+  }
+  return assigned;
+}
+
 export function translateText(text, options = {}) {
   if (text == null) return text;
   const original = String(text);
@@ -514,6 +613,9 @@ export function translateText(text, options = {}) {
 
   const afterEmpty = applyEmptyStateRules(original);
   if (afterEmpty !== original) return afterEmpty;
+
+  const afterLegal = applyLegalNoticeRules(original);
+  if (afterLegal !== original) return afterLegal;
 
   const afterRegex = applyRegexRules(original);
   if (afterRegex !== original) return afterRegex;

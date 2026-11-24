@@ -1,7 +1,7 @@
 /**
  * Minimal DOM mock to verify skip rules without a browser or jsdom dependency.
  */
-import { translateText, shouldSkipElement, shouldTranslatePlaceholder, isIsolatedUiControl } from '../src/engine.mjs';
+import { translateText, shouldSkipElement, shouldTranslatePlaceholder, isIsolatedUiControl, rewriteCompositeLegalNotice, LEGAL_NOTICE_ZH } from '../src/engine.mjs';
 
 const cases = [];
 function test(name, fn) {
@@ -45,7 +45,9 @@ function matchSelector(node, sel) {
     if (eq === -1) return node.getAttribute(body.replace(/"/g, '')) != null || (body in (node.attrs || {}));
     const k = body.slice(0, eq);
     const v = body.slice(eq + 1).replace(/"/g, '');
-    return String(node.getAttribute(k) || '') === v;
+    const actual = node.getAttribute(k);
+    if (actual == null) return false;
+    return String(actual) === v;
   }
   return node.tagName === sel.toUpperCase();
 }
@@ -127,5 +129,120 @@ test('bare No is not translated in non-isolated prose fragments', () => {
   assert(translateText(chat) === chat);
   assert(translateText('C:\\Users\\demo\\Downloads') === 'C:\\Users\\demo\\Downloads');
 });
+
+
+const LEGAL_BODY = 'Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here:';
+const PRIVACY_URL = 'https://policies.google.com/privacy';
+
+function createNode(type, tag, text) {
+  const node = {
+    nodeType: type,
+    tagName: tag,
+    attrs: {},
+    className: '',
+    parentElement: null,
+    childNodes: [],
+    _text: type === 3 ? (text || '') : '',
+    get textContent() {
+      if (this.nodeType === 3) return this._text;
+      return this.childNodes.map((c) => c.textContent).join('');
+    },
+    set textContent(v) {
+      if (this.nodeType === 3) {
+        this._text = v;
+        return;
+      }
+      this.childNodes = [];
+      if (v) {
+        const t = createNode(3, undefined, v);
+        t.parentElement = this;
+        this.childNodes.push(t);
+      }
+    },
+    getAttribute(name) { return this.attrs[name] ?? null; },
+    matches(selector) {
+      return selector.split(',').some((part) => matchSelector(this, part.trim()));
+    },
+    closest(selector) {
+      let cur = this;
+      while (cur) {
+        if (cur.matches && cur.matches(selector)) return cur;
+        cur = cur.parentElement;
+      }
+      return null;
+    },
+  };
+  return node;
+}
+
+function append(parent, child) {
+  child.parentElement = parent;
+  parent.childNodes.push(child);
+  return child;
+}
+
+function makeLegalNotice(body, href, linkText, opts = {}) {
+  const p = createNode(1, 'P');
+  if (opts.ariaLabel) p.attrs['aria-label'] = opts.ariaLabel;
+  const t = append(p, createNode(3, undefined, body));
+  const a = append(p, createNode(1, 'A'));
+  a.attrs.href = href;
+  a.href = href;
+  const at = append(a, createNode(3, undefined, linkText));
+  return { p, t, a, at };
+}
+
+test('legal notice body plus independent privacy link is rewritten and href kept', () => {
+  const { p, t, a, at } = makeLegalNotice(LEGAL_BODY + ' ', PRIVACY_URL, PRIVACY_URL, { ariaLabel: 'Marketplace notice' });
+  assert(rewriteCompositeLegalNotice(p) === true);
+  assert(t.textContent.includes('该政策详见：'), t.textContent);
+  assert(t.textContent.trim() === LEGAL_NOTICE_ZH);
+  assert(a.getAttribute('href') === PRIVACY_URL);
+  assert(at.textContent === PRIVACY_URL);
+  assert(p.getAttribute('aria-label') === 'Marketplace notice');
+  assert(p.textContent.includes(PRIVACY_URL));
+  assert(p.textContent.includes('该政策详见：'));
+});
+
+test('legal notice split across text nodes with newlines still translates', () => {
+  const p = createNode(1, 'DIV');
+  const t1 = append(p, createNode(3, undefined, LEGAL_BODY.replace('found here:', 'found\nhere:') + '\n'));
+  const a = append(p, createNode(1, 'A'));
+  a.attrs.href = PRIVACY_URL;
+  a.href = PRIVACY_URL;
+  const at = append(a, createNode(3, undefined, PRIVACY_URL));
+  assert(rewriteCompositeLegalNotice(p) === true);
+  assert(t1.textContent.trim() === LEGAL_NOTICE_ZH);
+  assert(a.getAttribute('href') === PRIVACY_URL);
+  assert(at.textContent === PRIVACY_URL);
+});
+
+test('legal notice rewrite skips chat, code, inputs, paths, lone URLs, and aria-label', () => {
+  const chat = createNode(1, 'DIV');
+  chat.className = 'markdown-body';
+  chat.attrs.class = 'markdown-body';
+  const p = append(chat, createNode(1, 'P'));
+  append(p, createNode(3, undefined, LEGAL_BODY + ' '));
+  const a = append(p, createNode(1, 'A'));
+  a.attrs.href = PRIVACY_URL;
+  append(a, createNode(3, undefined, PRIVACY_URL));
+  assert(shouldSkipElement(p) === true);
+  assert(rewriteCompositeLegalNotice(p) === false);
+  assert(p.textContent.includes('Google does not control'));
+
+  const pre = createNode(1, 'PRE');
+  append(pre, createNode(3, undefined, LEGAL_BODY));
+  assert(shouldSkipElement(pre) === true);
+  assert(rewriteCompositeLegalNotice(pre) === false);
+
+  const input = el('input');
+  assert(shouldSkipElement(input) === true);
+
+  assert(translateText(PRIVACY_URL) === PRIVACY_URL);
+  assert(translateText('C:\\Users\\demo\\Downloads') === 'C:\\Users\\demo\\Downloads');
+  const aria = el('button', { 'aria-label': LEGAL_BODY });
+  assert(aria.getAttribute('aria-label') === LEGAL_BODY);
+});
+
 
 export default cases;
