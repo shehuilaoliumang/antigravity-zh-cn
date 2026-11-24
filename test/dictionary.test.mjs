@@ -235,8 +235,52 @@ test('screenshot shortcuts and side panel disambiguation', () => {
   }
   assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
   assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
-  assert(Object.keys(dictionary).length >= 1900, 'expected >= 1900 entries, got ' + Object.keys(dictionary).length);
+  assert(Object.keys(dictionary).length >= 1970, 'expected >= 1970 entries, got ' + Object.keys(dictionary).length);
   assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
+});
+
+
+test('sidebar group/sort/filter menu labels', () => {
+  assert(translateText('Sort Projects') === '项目排序');
+  assert(translateText('Sort Workspaces') === '工作区排序');
+  assert(translateText('Auto Pin') === '自动置顶');
+  assert(translateText('Archived Only') === '仅已归档');
+  assert(translateText('Sort Conversations') === '对话排序');
+  assert(translateText('Last Updated') === '最后更新');
+  assert(translateText('Custom Order') === '自定义顺序');
+  assert(translateText('Repo') === '仓库');
+});
+
+test('automations empty state is not split-translated', () => {
+  assert(translateText('Create with Prompt') === '用提示词创建');
+  assert(translateText('No automations yet') === '还没有自动化');
+  assert(!translateText('No automations yet').includes('否'));
+  assert(!translateText('No automations yet').includes('yet'));
+  assert(translateText('No  automations  yet') === '还没有自动化');
+  assert(translateText("Run a prompt on a schedule, like a morning summary of yesterday's changes. Runs show up here.") === '按计划运行提示词，比如每天早上汇总昨天的变更。运行记录会显示在这里。');
+  assert(translateText('No conversations yet') === '暂无对话');
+  assert(translateText('No projects yet') === '暂无项目');
+  assert(translateText('No tasks yet') === '暂无任务');
+  assert(translateText('No automations match “daily”.') === '没有与“daily”匹配的自动化');
+  assert(translateText('No automations match "daily".') === '没有与“daily”匹配的自动化');
+  // Bare Yes/No must not be rewritten unless isolated (avoids "否 自动化 yet")
+  assert(translateText('No') === 'No');
+  assert(translateText('Yes') === 'Yes');
+  assert(translateText('No', { isolated: true }) === '否');
+  assert(translateText('Yes', { isolated: true }) === '是');
+});
+
+test('marketplace featured and workspace plugin copy', () => {
+  assert(translateText('Featured') === '精选');
+  assert(translateText('Connect to Google Workspace, including Docs, Sheets, Slides, Drive, Calendar, and Gmail.') === '连接到 Google Workspace，包括文档、表格、幻灯片、云端硬盘、日历和 Gmail。');
+  assert(translateText('Read, draft, and edit docs.') === '阅读、起草和编辑文档。');
+  assert(translateText('Read, write, and format spreadsheets.') === '阅读、编写和设置表格格式。');
+  assert(translateText('Read, edit, and export presentations.') === '阅读、编辑和导出演示文稿。');
+  assert(translateText('Search, upload, download, and share files.') === '搜索、上传、下载和共享文件。');
+  assert(translateText('Check availability, schedule events, and RSVP.') === '查看空闲时间、安排日程并回复邀请。');
+  assert(translateText('Search, read, draft, and send emails in Gmail.') === '在 Gmail 中搜索、阅读、起草和发送邮件。');
+  assert(translateText("Up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your coding agent's context.") === '最新文档查询。可从源仓库直接拉取特定版本的文档和代码示例，放入编码智能体的上下文中。');
+  assert(translateText('Context7') === 'Context7');
 });
 
 export default cases;

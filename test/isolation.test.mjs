@@ -120,4 +120,12 @@ test('chat body, code, and inputs remain skipped even when copy matches new entr
   assert(translateText(chat) === chat);
 });
 
+
+test('bare No is not translated in non-isolated prose fragments', () => {
+  const chat = 'No automations yet? Please wait and do not click Featured.';
+  // full sentence is not an exact empty-state phrase (has ?)
+  assert(translateText(chat) === chat);
+  assert(translateText('C:\\Users\\demo\\Downloads') === 'C:\\Users\\demo\\Downloads');
+});
+
 export default cases;

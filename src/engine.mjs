@@ -255,6 +255,71 @@ function formatDuration(raw) {
     .trim();
 }
 
+
+const EMPTY_STATE_NOUNS = {
+  automations: '还没有自动化',
+  automation: '还没有自动化',
+  conversations: '暂无对话',
+  conversation: '暂无对话',
+  projects: '暂无项目',
+  project: '暂无项目',
+  tasks: '暂无任务',
+  task: '暂无任务',
+  agents: '还没有智能体',
+  files: '暂无文件',
+  results: '暂无结果',
+  items: '还没有条目',
+  plugins: '还没有插件',
+  customizations: '还没有自定义项',
+  'custom agents': '暂无自定义智能体',
+  'mcp servers': '暂无 MCP 服务器',
+  'archived conversations': '暂无已归档的对话',
+  'matching conversations': '没有匹配的对话'
+};
+
+const EMPTY_STATE_MATCH_NOUNS = {
+  automations: '自动化',
+  automation: '自动化',
+  conversations: '对话',
+  conversation: '对话',
+  projects: '项目',
+  project: '项目',
+  tasks: '任务',
+  task: '任务',
+  agents: '智能体',
+  files: '文件',
+  results: '结果',
+  items: '条目',
+  plugins: '插件',
+  customizations: '自定义项'
+};
+
+export function looksLikeCompositeEmptyState(text) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  return /^No\s+.+\s+yet\.?$/i.test(t) || /^No\s+.+\s+match\s+[\u201c"'].+[\u201d"']\.?$/i.test(t);
+}
+
+export function applyEmptyStateRules(text) {
+  const original = String(text ?? '');
+  const trimmed = original.trim();
+  if (!trimmed) return original;
+
+  let m = trimmed.match(/^No\s+(.+?)\s+yet\.?$/i);
+  if (m) {
+    const key = m[1].replace(/\s+/g, ' ').trim().replace(/\.$/, '').toLowerCase();
+    const zh = EMPTY_STATE_NOUNS[key];
+    if (zh) return original.replace(trimmed, zh);
+  }
+
+  m = trimmed.match(/^No\s+(.+?)\s+match\s+[\u201c"'](.+?)[\u201d"']\.?$/i);
+  if (m) {
+    const key = m[1].replace(/\s+/g, ' ').trim().toLowerCase();
+    const noun = EMPTY_STATE_MATCH_NOUNS[key] || m[1];
+    return original.replace(trimmed, '没有与“' + m[2] + '”匹配的' + noun);
+  }
+  return original;
+}
+
 export function applyRegexRules(text) {
   const trimmed = text.trim();
   let m;
@@ -382,6 +447,9 @@ export function translateText(text, options = {}) {
 
   const afterGreeting = applyGreetingRules(original);
   if (afterGreeting !== original) return afterGreeting;
+
+  const afterEmpty = applyEmptyStateRules(original);
+  if (afterEmpty !== original) return afterEmpty;
 
   const afterRegex = applyRegexRules(original);
   if (afterRegex !== original) return afterRegex;
