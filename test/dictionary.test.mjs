@@ -283,4 +283,31 @@ test('marketplace featured and workspace plugin copy', () => {
   assert(translateText('Context7') === 'Context7');
 });
 
+
+test('informal Hey/Hi/Hello greetings with placeholder names only', () => {
+  assert(translateText('Hey Alex, what should we build today?') === '你好，Alex，今天我们做点什么？');
+  assert(translateText('Hi Alex, what should we build today?') === '你好，Alex，今天我们做点什么？');
+  assert(translateText('Hello Alex, what should we build today?') === '你好，Alex，今天我们做点什么？');
+  assert(translateText('Hey Alex, what are we building today?') === '你好，Alex，今天我们要构建什么？');
+  assert(translateText('Hey Alex, what would you like to work on?') === '你好，Alex，你想做些什么？');
+  assert(translateText('Hey Alex, how can I help today?') === '你好，Alex，今天我能帮你什么？');
+  assert(translateText('Hey Alex, ready to get started?') === '你好，Alex，准备好开始了吗？');
+  assert(translateText('Hey Alex, where should we pick up?') === '你好，Alex，从哪里继续？');
+  // Existing formal greetings must stay intact
+  assert(translateText('Welcome back, Alex. Where should we pick up?') === '欢迎回来，Alex。从哪里继续？');
+  assert(translateText('Good morning, Alex.') === '早上好，Alex。');
+  // React-split fragments
+  assert(translateText('Hey') === '你好，');
+  assert(translateText('Hey,') === '你好，');
+  assert(translateText('Hey ') === '你好，');
+  assert(translateText('Hi,') === '你好，');
+  assert(translateText('Hello,') === '你好，');
+  assert(translateText('Alex') === 'Alex');
+  assert(translateText('Hey Alex,') === '你好，Alex，');
+  assert(translateText(', what should we build today?') === '，今天我们做点什么？');
+  assert(translateText('What should we build today?') === '今天我们做点什么？');
+  assert(translateText('Hello World') === 'Hello World');
+  assert(applyGreetingRules('Hey C:\\Users\\demo\\Downloads, what should we build today?') === 'Hey C:\\Users\\demo\\Downloads, what should we build today?');
+});
+
 export default cases;

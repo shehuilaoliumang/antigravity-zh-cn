@@ -123,19 +123,24 @@ const GREETING_HEADS = {
   'Welcome': '欢迎',
   'Good morning': '早上好',
   'Good afternoon': '下午好',
-  'Good evening': '晚上好'
+  'Good evening': '晚上好',
+  'Hey': '你好',
+  'Hi': '你好',
+  'Hello': '你好'
 };
 
 const GREETING_TAILS = {
   'Where should we pick up?': '从哪里继续？',
   'What would you like to work on?': '你想做些什么？',
   'What are we building today?': '今天我们要构建什么？',
+  'What should we build today?': '今天我们做点什么？',
   'How can I help today?': '今天我能帮你什么？',
   'Ready to get started?': '准备好开始了吗？'
 };
 
-const GREETING_HEAD_RE = 'Welcome back|Welcome|Good morning|Good afternoon|Good evening';
-const GREETING_TAIL_RE = 'Where should we pick up\\?|What would you like to work on\\?|What are we building today\\?|How can I help today\\?|Ready to get started\\?';
+const GREETING_HEAD_RE = 'Welcome back|Good morning|Good afternoon|Good evening|Welcome|Hello|Hey|Hi';
+const INFORMAL_HEAD_RE = 'Hello|Hey|Hi';
+const GREETING_TAIL_RE = 'Where should we pick up\\?|What would you like to work on\\?|What are we building today\\?|What should we build today\\?|How can I help today\\?|Ready to get started\\?';
 
 function isSafeGreetingName(name) {
   const n = String(name || '').trim();
@@ -169,6 +174,31 @@ export function applyGreetingRules(text) {
   const original = String(text ?? '');
   const trimmed = original.trim();
   if (!trimmed) return original;
+
+  const informalFull = trimmed.match(new RegExp('^(' + INFORMAL_HEAD_RE + ')\\s+(.+?),\\s+(' + GREETING_TAIL_RE + ')$', 'i'));
+  if (informalFull && isSafeGreetingName(informalFull[2])) {
+    const head = pickGreetingHead(informalFull[1]);
+    const tail = pickGreetingTail(informalFull[3]);
+    if (head && tail) return swapTrimmed(original, trimmed, head + '，' + informalFull[2].trim() + '，' + tail);
+  }
+
+  const informalNamed = trimmed.match(new RegExp('^(' + INFORMAL_HEAD_RE + ')\\s+(.+?),\\s*$', 'i'));
+  if (informalNamed && isSafeGreetingName(informalNamed[2]) && !new RegExp('^(' + GREETING_TAIL_RE + ')$', 'i').test(informalNamed[2].trim())) {
+    const head = pickGreetingHead(informalNamed[1]);
+    if (head) return swapTrimmed(original, trimmed, head + '，' + informalNamed[2].trim() + '，');
+  }
+
+  const informalHeadOnly = trimmed.match(new RegExp('^(' + INFORMAL_HEAD_RE + '),?\\s*$', 'i'));
+  if (informalHeadOnly) {
+    const head = pickGreetingHead(informalHeadOnly[1]);
+    if (head) return swapTrimmed(original, trimmed, head + '，');
+  }
+
+  const informalTail = trimmed.match(new RegExp('^,\\s*(' + GREETING_TAIL_RE + ')$', 'i'));
+  if (informalTail) {
+    const tail = pickGreetingTail(informalTail[1]);
+    if (tail) return swapTrimmed(original, trimmed, '，' + tail);
+  }
 
   const full = trimmed.match(new RegExp('^(' + GREETING_HEAD_RE + '),\\s+(.+?)\\.\\s+(' + GREETING_TAIL_RE + ')$', 'i'));
   if (full && isSafeGreetingName(full[2])) {
