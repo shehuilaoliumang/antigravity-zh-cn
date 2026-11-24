@@ -2171,5 +2171,20 @@
   "Salaries, jobs & career advice. Levels.fyi is your career companion to ensure you get paid fairly and find jobs you'll love.": "薪资、职位与职业建议。Levels.fyi 是你的职业伙伴，帮助你获得公平薪酬并找到喜爱的工作。",
   "Salaries, jobs & career advice. Levels.fyi is your career companion to ensure you get paid fairly and find jobs you’ll love.": "薪资、职位与职业建议。Levels.fyi 是你的职业伙伴，帮助你获得公平薪酬并找到喜爱的工作。",
   "APIs, services, and tools to build, test, secure, and run your apps.": "用于构建、测试、保护和运行应用的 API、服务与工具。",
-  "Agent skills, databases, and interactive viewers for scientific research.": "面向科学研究的智能体技能、数据库与交互式查看器。"
+  "Agent skills, databases, and interactive viewers for scientific research.": "面向科学研究的智能体技能、数据库与交互式查看器。",
+  "Controls how much time and quota the model spends reasoning before responding. Higher effort improves accuracy on hard problems, at the cost of slower responses and higher quota use.": "控制模型在回复前用于推理的时间和配额。提高思考深度可提升难题准确度，但响应会更慢，配额消耗也更高。",
+  "When Turbo mode is on, the agent will automatically capture screenshots in the Browser without explicit user input. You can toggle this setting in Antigravity's settings.": "开启极速模式后，智能体将在浏览器中自动截图，无需用户明确指示。可在 Antigravity 的设置中开关此项。",
+  "A chunk is a section of the page. Long pages are chunked so that only the sections that are relevant to your query are read.": "分块是页面中的一个片段。较长页面会被拆成多个分块，以便只读取与你的查询相关的部分。",
+  "Agent can retrieve console logs from the browser and return it for further processing.": "智能体可以从浏览器获取控制台日志并返回，以便进一步处理。",
+  "Agent can scroll on browser pages to access more content.": "智能体可以在浏览器页面中滚动，以获取更多内容。",
+  "Artifacts like Google Docs, PDFs, Office documents (Word, Excel, PowerPoint), etc. Everything else the agent creates is under Artifacts.": "产物包括 Google Docs、PDF、Office 文档（Word、Excel、PowerPoint）等。智能体创建的其他内容也都归入「产物」。",
+  "Automatically pin conversations when you send a message. Unpin as needed to keep your Pinned list focused.": "发送消息时自动将对话置顶。可按需取消置顶，以保持「已置顶」列表简洁。",
+  "Keep running conversations in a separate Working section instead of in the Inbox.": "将进行中的对话放在单独的「工作中」分区，而不是收件箱。",
+  "Move idle Inbox conversations to Resolved automatically after the selected time.": "在选定时间后，自动将收件箱中闲置的对话移至「已解决」。",
+  "Custom models are only supported on Linux machines.": "自定义模型仅在 Linux 设备上受支持。",
+  "Your AI credits balance is too low to continue.": "你的 AI 积分余额过低，无法继续。",
+  "Screenshot must be under 10 MB": "截图须小于 10 MB",
+  "Some sites block embedding (via X-Frame-Options or CSP) and will show a fallback message. Blocked-page detection is best-effort (based on a load timeout), so it may occasionally be wrong. Use \"Open in new tab\" if a page doesn't load.": "部分网站会（通过 X-Frame-Options 或 CSP）阻止嵌入，并将显示回退提示。被拦截页面的检测为尽力而为（基于加载超时），因此偶尔可能不准确。若页面无法加载，请使用「在新标签页中打开」。",
+  "Workflows are changing on October 19th—stay tuned for updates. You can use the agent to migrate your workflows.": "工作流将于 10 月 19 日变更——敬请期待后续更新。你可以使用智能体迁移现有工作流。",
+  "Browser is currently being operated by this conversation in another Hub window": "此对话正在另一个 Hub 窗口中操作浏览器"
 }

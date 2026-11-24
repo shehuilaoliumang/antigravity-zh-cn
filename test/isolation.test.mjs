@@ -245,4 +245,17 @@ test('legal notice rewrite skips chat, code, inputs, paths, lone URLs, and aria-
 });
 
 
+test('thinking-effort tooltip text is translated; aria-label is not rewritten', () => {
+  const effort = 'Controls how much time and quota the model spends reasoning before responding. Higher effort improves accuracy on hard problems, at the cost of slower responses and higher quota use.';
+  const effortZh = '控制模型在回复前用于推理的时间和配额。提高思考深度可提升难题准确度，但响应会更慢，配额消耗也更高。';
+  assert(translateText(effort) === effortZh);
+  const btn = el('span', { 'aria-label': effort, role: 'img', 'data-testid': 'model-selector-effort-info' });
+  assert(btn.getAttribute('aria-label') === effort);
+  // engine must not expose or perform a default aria-label rewrite
+  assert(shouldSkipElement(el('textarea')) === true);
+  assert(shouldSkipElement(el('code')) === true);
+  assert(translateText(effort) !== btn.getAttribute('aria-label'));
+});
+
+
 export default cases;

@@ -235,7 +235,7 @@ test('screenshot shortcuts and side panel disambiguation', () => {
   }
   assert(translateText('Toggle Sidebar') !== translateText('Toggle Side Panel'));
   assert(dictionary['Toggle Sidebar'] !== dictionary['Toggle Side Panel']);
-  assert(Object.keys(dictionary).length >= 2173, 'expected >= 2173 entries, got ' + Object.keys(dictionary).length);
+  assert(Object.keys(dictionary).length >= 2188, 'expected >= 2188 entries, got ' + Object.keys(dictionary).length);
   assert(new Set(Object.keys(dictionary)).size === Object.keys(dictionary).length, 'duplicate dictionary keys');
 });
 
@@ -380,6 +380,35 @@ test('marketplace shelves, see-N-more, legal notice, and plugin descriptions', (
   assert(translateText(legalWrapped) === 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：https://policies.google.com/privacy');
   const legalBodyWrapped = '\n  ' + 'Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here:'.replace('Policy, found here:', 'Policy,\nfound here:') + '\n';
   assert(translateText(legalBodyWrapped) === '\n  ' + 'Google 并不控制第三方开发者工具的可用性或功能。连接到你的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将按照 Google 隐私权政策保护此类数据，该政策详见：' + '\n');
+});
+
+
+test('thinking-effort and confirmed info tooltips', () => {
+  const effort = 'Controls how much time and quota the model spends reasoning before responding. Higher effort improves accuracy on hard problems, at the cost of slower responses and higher quota use.';
+  const effortZh = '控制模型在回复前用于推理的时间和配额。提高思考深度可提升难题准确度，但响应会更慢，配额消耗也更高。';
+  assert(translateText(effort) === effortZh);
+  assert(translateText('Thinking effort') === '思考深度');
+  assert(translateText('Thinking Effort') === '思考深度');
+  const wrapped = '\n  ' + effort.replace('responding. Higher', 'responding.\n  Higher') + '\n';
+  assert(translateText(wrapped) === '\n  ' + effortZh + '\n');
+  assert(translateText('When Turbo mode is on, the agent will automatically capture screenshots in the Browser without explicit user input. You can toggle this setting in Antigravity\'s settings.') === '开启极速模式后，智能体将在浏览器中自动截图，无需用户明确指示。可在 Antigravity 的设置中开关此项。');
+  assert(translateText('A chunk is a section of the page. Long pages are chunked so that only the sections that are relevant to your query are read.') === '分块是页面中的一个片段。较长页面会被拆成多个分块，以便只读取与你的查询相关的部分。');
+  assert(translateText('Agent can retrieve console logs from the browser and return it for further processing.') === '智能体可以从浏览器获取控制台日志并返回，以便进一步处理。');
+  assert(translateText('Agent can scroll on browser pages to access more content.') === '智能体可以在浏览器页面中滚动，以获取更多内容。');
+  assert(translateText('Artifacts like Google Docs, PDFs, Office documents (Word, Excel, PowerPoint), etc. Everything else the agent creates is under Artifacts.') === '产物包括 Google Docs、PDF、Office 文档（Word、Excel、PowerPoint）等。智能体创建的其他内容也都归入「产物」。');
+  assert(translateText('Automatically pin conversations when you send a message. Unpin as needed to keep your Pinned list focused.') === '发送消息时自动将对话置顶。可按需取消置顶，以保持「已置顶」列表简洁。');
+  assert(translateText('Keep running conversations in a separate Working section instead of in the Inbox.') === '将进行中的对话放在单独的「工作中」分区，而不是收件箱。');
+  assert(translateText('Move idle Inbox conversations to Resolved automatically after the selected time.') === '在选定时间后，自动将收件箱中闲置的对话移至「已解决」。');
+  assert(translateText('Custom models are only supported on Linux machines.') === '自定义模型仅在 Linux 设备上受支持。');
+  assert(translateText('Your AI credits balance is too low to continue.') === '你的 AI 积分余额过低，无法继续。');
+  assert(translateText('Screenshot must be under 10 MB') === '截图须小于 10 MB');
+  assert(translateText('Some sites block embedding (via X-Frame-Options or CSP) and will show a fallback message. Blocked-page detection is best-effort (based on a load timeout), so it may occasionally be wrong. Use "Open in new tab" if a page doesn\'t load.') === '部分网站会（通过 X-Frame-Options 或 CSP）阻止嵌入，并将显示回退提示。被拦截页面的检测为尽力而为（基于加载超时），因此偶尔可能不准确。若页面无法加载，请使用「在新标签页中打开」。');
+  assert(translateText('Workflows are changing on October 19th—stay tuned for updates. You can use the agent to migrate your workflows.') === '工作流将于 10 月 19 日变更——敬请期待后续更新。你可以使用智能体迁移现有工作流。');
+  assert(translateText('Browser is currently being operated by this conversation in another Hub window') === '此对话正在另一个 Hub 窗口中操作浏览器');
+  assert(translateText('https://policies.google.com/privacy') === 'https://policies.google.com/privacy');
+  assert(translateText('C:\\Users\\demo\\Downloads') === 'C:\\Users\\demo\\Downloads');
+  const chat = 'Please click View plans and then set Voice to Verbose if Change... is Not set.';
+  assert(translateText(chat) === chat);
 });
 
 test('informal Hey/Hi/Hello greetings with placeholder names only', () => {

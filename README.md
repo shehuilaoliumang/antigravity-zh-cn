@@ -2,7 +2,7 @@
 
 面向 **Google Antigravity Desktop 2.35.0** 的开源简体中文汉化补丁。
 
-> **开源出处说明**：本项目的基础词库（676 条）与部分基础菜单映射衍生自 [MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)（MIT License），在此基础上针对 2.35.0 重构了防误译隔离引擎、补齐 13 个原生壳层模块与 1497 条新词条。完整版权与协议声明见下方「出处声明与致谢」、[LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+> **开源出处说明**：本项目的基础词库（676 条）与部分基础菜单映射衍生自 [MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)（MIT License），在此基础上针对 2.35.0 重构了防误译隔离引擎、补齐 13 个原生壳层模块与 1512 条新词条。完整版权与协议声明见下方「出处声明与致谢」、[LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 本仓库只包含词库、运行时引擎和补丁工具，**不包含**任何 Antigravity 原版代码、`app.asar` 或 Electron 二进制。所有路径都在运行时解析（Windows 默认 `%LOCALAPPDATA%\Programs\Antigravity`，也可用 `--app-dir` 指定）。
 
@@ -13,7 +13,7 @@
 - **Hub 网页界面**（侧边栏、会话/线程、工作区、Git / 分支 / Diff / 拉取请求、SSH / WSL / 远程主机、智能体 / 编排器 / 执行器 / 协作集群、模型与思考深度、权限 / 审批 / 沙箱、MCP / 技能 / 规则 / 工作流、浏览器 / 产物 / 审阅、设置 / 账户 / 快捷键、通知、空状态、相对时间与计数等）：通过向 `dist/preload.js` 追加带标记的 DOM 翻译引擎，在运行时翻译可见 UI 文本。
 - **原生壳层**：应用菜单（含 Docs、连接到 WSL、在本地重新打开等）、托盘与运行中智能体计数、退出确认、更新与错误对话框、IDE 安装向导、WSL 启动闪屏、设备选择、SSH 提示与断线页等。
 
-当前词库约 **2173** 条精确译文，另有前缀规则、动态正则与核心词（仅用于独立控件）。
+当前词库约 **2188** 条精确译文，另有前缀规则、动态正则与核心词（仅用于独立控件）。
 
 ## 防误译设计
 
@@ -113,7 +113,7 @@ node test/run.mjs
 
 - **[MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)**（MIT License，`Copyright (c) 2026 Antigravity-zh Contributors`）
   - 本项目 `src/dictionary.json` 中 676 条基础译文（668 条原样沿用、8 条润色）及 36 条基础原生菜单映射承接自该项目的 `Antigravity-Patcher.py`。
-  - 其余 1497 条 2.35.0 词条、19 条新增菜单项、13 个主进程/原生壳层文件的 72 处锚点译文、模块化 DOM 隔离引擎、`patch.mjs` / `install.ps1` / `restore.ps1` 与自动化测试均为本仓库独立编写。
+  - 其余 1512 条 2.35.0 词条、19 条新增菜单项、13 个主进程/原生壳层文件的 72 处锚点译文、模块化 DOM 隔离引擎、`patch.mjs` / `install.ps1` / `restore.ps1` 与自动化测试均为本仓库独立编写。
   - 完整上游 MIT 协议原文见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 - 感谢 Antigravity 中文汉化社区公开分享的防误译隔离实践（如避开 Markdown 正文、代码编辑器、输入框与 `aria-label` 等通用思路）；本仓库未复制其他社区仓库的源码或词库文件。
 
