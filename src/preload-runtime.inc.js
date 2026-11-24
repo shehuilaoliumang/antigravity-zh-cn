@@ -25,6 +25,118 @@
     return false;
   }
 
+  function looksLikeShortcut(text) {
+    const s = String(text || '').trim();
+    if (!s) return false;
+    if (/^\d+\s*%$/.test(s)) return true;
+    return /^(?:(?:Ctrl|Control|Cmd|Command|Alt|Option|Shift|Meta|Win|Super)\s*\+\s*)+(?:[A-Za-z0-9]|F\d{1,2}|Enter|Tab|Space|Esc|Escape|Backspace|Delete|Home|End|Insert|PageUp|PageDown|\[|\]|\\|;|'|,|\.|\/|`|-|=)$/i.test(s);
+  }
+
+  var GREETING_HEADS = {
+    'Welcome back': '欢迎回来',
+    'Welcome': '欢迎',
+    'Good morning': '早上好',
+    'Good afternoon': '下午好',
+    'Good evening': '晚上好'
+  };
+
+  var GREETING_TAILS = {
+    'Where should we pick up?': '从哪里继续？',
+    'What would you like to work on?': '你想做些什么？',
+    'What are we building today?': '今天我们要构建什么？',
+    'How can I help today?': '今天我能帮你什么？',
+    'Ready to get started?': '准备好开始了吗？'
+  };
+
+  var GREETING_HEAD_RE = 'Welcome back|Welcome|Good morning|Good afternoon|Good evening';
+  var GREETING_TAIL_RE = 'Where should we pick up\\?|What would you like to work on\\?|What are we building today\\?|How can I help today\\?|Ready to get started\\?';
+
+  function isSafeGreetingName(name) {
+    const n = String(name || '').trim();
+    if (!n || n.length > 80) return false;
+    if (looksLikePathOrId(n) || looksLikeShortcut(n)) return false;
+    if (/https?:\/\//i.test(n) || /[\\/]/.test(n) || /@/.test(n)) return false;
+    return true;
+  }
+
+  function pickGreetingHead(raw) {
+    const keys = Object.keys(GREETING_HEADS);
+    for (let i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === String(raw).toLowerCase()) return GREETING_HEADS[keys[i]];
+    }
+    return null;
+  }
+
+  function pickGreetingTail(raw) {
+    const keys = Object.keys(GREETING_TAILS);
+    for (let i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === String(raw).toLowerCase()) return GREETING_TAILS[keys[i]];
+    }
+    return null;
+  }
+
+  function swapTrimmed(original, trimmed, next) {
+    const start = original.indexOf(trimmed);
+    if (start < 0) return next;
+    let end = start + trimmed.length;
+    if (/[，。]$/.test(next)) {
+      while (end < original.length && /\s/.test(original.charAt(end))) end += 1;
+    }
+    return original.slice(0, start) + next + original.slice(end);
+  }
+
+  function applyGreetingRules(text) {
+    const original = String(text == null ? '' : text);
+    const trimmed = original.trim();
+    if (!trimmed) return original;
+
+    let m = trimmed.match(new RegExp('^(' + GREETING_HEAD_RE + '),\\s+(.+?)\\.\\s+(' + GREETING_TAIL_RE + ')$', 'i'));
+    if (m && isSafeGreetingName(m[2])) {
+      const head = pickGreetingHead(m[1]);
+      const tail = pickGreetingTail(m[3]);
+      if (head && tail) return swapTrimmed(original, trimmed, head + '，' + m[2].trim() + '。' + tail);
+    }
+
+    m = trimmed.match(new RegExp('^(' + GREETING_HEAD_RE + '),\\s+(.+?)\\.?$', 'i'));
+    if (m && isSafeGreetingName(m[2]) && !new RegExp('^(' + GREETING_TAIL_RE + ')$', 'i').test(m[2].trim())) {
+      const head = pickGreetingHead(m[1]);
+      if (head) return swapTrimmed(original, trimmed, head + '，' + m[2].trim() + '。');
+    }
+
+    m = trimmed.match(new RegExp('^(' + GREETING_HEAD_RE + '),\\s*$', 'i'));
+    if (m) {
+      const head = pickGreetingHead(m[1]);
+      if (head) return swapTrimmed(original, trimmed, head + '，');
+    }
+
+    m = trimmed.match(new RegExp('^\\.?\\s*(' + GREETING_TAIL_RE + ')$', 'i'));
+    if (m) {
+      const tail = pickGreetingTail(m[1]);
+      if (tail) {
+        const hadDot = /^\./.test(trimmed);
+        return swapTrimmed(original, trimmed, (hadDot ? '。' : '') + tail);
+      }
+    }
+
+    return original;
+  }
+
+  function lookupDictionary(trimmed) {
+    if (!trimmed) return null;
+    if (Object.prototype.hasOwnProperty.call(DICTIONARY, trimmed)) return DICTIONARY[trimmed];
+    const collapsed = trimmed.replace(/\s+/g, ' ');
+    if (collapsed !== trimmed && Object.prototype.hasOwnProperty.call(DICTIONARY, collapsed)) return DICTIONARY[collapsed];
+    if (trimmed.length >= 3) {
+      const lower = lowerDictionary.get(trimmed.toLowerCase());
+      if (lower) return lower;
+      if (collapsed !== trimmed) {
+        const lowerCollapsed = lowerDictionary.get(collapsed.toLowerCase());
+        if (lowerCollapsed) return lowerCollapsed;
+      }
+    }
+    return null;
+  }
+
   function looksLikeProse(text) {
     const s = String(text || '').trim();
     if (s.length >= 180 && !DICTIONARY[s] && !lowerDictionary.has(s.toLowerCase())) {
@@ -123,13 +235,13 @@
     const original = String(text);
     if (!/[A-Za-z]/.test(original)) return original;
     if (looksLikePathOrId(original)) return original;
+    if (looksLikeShortcut(original)) return original;
     const trimmed = original.trim();
     if (!trimmed) return original;
-    if (Object.prototype.hasOwnProperty.call(DICTIONARY, trimmed)) {
-      return original.replace(trimmed, DICTIONARY[trimmed]);
-    }
-    const lower = lowerDictionary.get(trimmed.toLowerCase());
-    if (lower && trimmed.length >= 3) return original.replace(trimmed, lower);
+    const exact = lookupDictionary(trimmed);
+    if (exact) return original.replace(trimmed, exact);
+    const afterGreeting = applyGreetingRules(original);
+    if (afterGreeting !== original) return afterGreeting;
     const afterRegex = applyRegexRules(original);
     if (afterRegex !== original) return afterRegex;
     for (let i = 0; i < PREFIX_RULES.length; i++) {
@@ -150,6 +262,7 @@
       const parent = node.parentElement;
       if (shouldSkipElement(parent)) return;
       if (looksLikePathOrId(node.textContent)) return;
+      if (looksLikeShortcut(node.textContent)) return;
       const isolated = !!(parent && isIsolatedUiControl(parent));
       const translated = translateText(node.textContent, { isolated: isolated });
       if (translated !== node.textContent) node.textContent = translated;

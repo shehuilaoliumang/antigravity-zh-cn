@@ -100,4 +100,24 @@ test('code-like identifiers are not treated as UI', () => {
   function looksSafe() { return true; }
 });
 
+
+test('windows download path and shortcut badges stay untranslated', () => {
+  assert(translateText('C:\\Users\\demo\\Downloads') === 'C:\\Users\\demo\\Downloads');
+  assert(translateText('Ctrl + Alt + [') === 'Ctrl + Alt + [');
+  assert(translateText('Ctrl + L') === 'Ctrl + L');
+  assert(translateText('Alt + Shift + M') === 'Alt + Shift + M');
+});
+
+test('chat body, code, and inputs remain skipped even when copy matches new entries', () => {
+  assert(shouldSkipElement(el('div', { class: 'markdown-body' })));
+  assert(shouldSkipElement(el('div', { 'data-testid': 'user-input-step' })));
+  assert(shouldSkipElement(el('pre')));
+  assert(shouldSkipElement(el('code')));
+  assert(shouldSkipElement(el('textarea')));
+  assert(shouldSkipElement(el('input')));
+  assert(shouldSkipElement(el('div', { contenteditable: 'true' })));
+  const chat = 'Please click View plans and then set Voice to Verbose if Change... is Not set.';
+  assert(translateText(chat) === chat);
+});
+
 export default cases;
