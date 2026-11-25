@@ -530,4 +530,14 @@ test('title-menu Version prefix from official Hub template', () => {
   assert(translateText('Check for Updates') === '检查更新');
 });
 
+test('global permissions settings description', () => {
+  assert(translateText('Configure global allowed and denied resource permissions.') === '配置全局允许和拒绝的资源权限。');
+  assert(translateText('Configure global allowed and denied resource permissions') === '配置全局允许和拒绝的资源权限');
+  assert(translateText('Configure what the agent can do in local and remote conversations.') === '配置智能体在本地和远程对话中可以执行的操作。');
+  assert(translateText('Configure what the agent can do in local and remote conversations') === '配置智能体在本地和远程对话中可以执行的操作');
+  assert(translateText('Global Permissions') === '全局权限');
+  assert(translateText('Learn more') === '了解更多');
+  assert(translateText('Learn more.') === '了解更多。');
+});
+
 export default cases;
