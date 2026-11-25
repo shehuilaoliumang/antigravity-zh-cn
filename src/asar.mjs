@@ -4,7 +4,9 @@
  * update drops a packed app.asar. Not for bundling official sources
  * into this repository.
  */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 function align4(n) {
@@ -123,6 +125,52 @@ export function extractAsarFile(asarPath, dest, options = {}) {
   return extractAsarBuffer(buf, dest, options);
 }
 
+export function readAsarEntry(asarPath, relPath) {
+  const buf = fs.readFileSync(asarPath);
+  const { header, dataOffset } = readAsarHeader(buf);
+  const want = String(relPath || '').replace(/\\/g, '/').replace(/^\//, '');
+  const list = [];
+  walkHeader(header.files, '', list);
+  const f = list.find((item) => item.rel === want);
+  if (!f) return null;
+  const size = Number(f.size || 0);
+  const offset = dataOffset + Number(f.offset || 0);
+  return buf.subarray(offset, offset + size);
+}
+
+export function sha256File(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+export function removeDir(dir) {
+  if (!dir || !fs.existsSync(dir)) return;
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+function copyDir(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
+    const from = path.join(src, ent.name);
+    const to = path.join(dest, ent.name);
+    if (ent.isDirectory()) copyDir(from, to);
+    else if (ent.isFile()) fs.copyFileSync(from, to);
+  }
+}
+
+export function moveDir(src, dest) {
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  try {
+    fs.renameSync(src, dest);
+  } catch (err) {
+    if (err && (err.code === 'EXDEV' || err.code === 'EPERM' || err.code === 'EACCES')) {
+      copyDir(src, dest);
+      removeDir(src);
+      return;
+    }
+    throw err;
+  }
+}
+
 export function mergeUnpackedDir(unpackedRoot, dest) {
   if (!unpackedRoot || !fs.existsSync(unpackedRoot)) return { copied: 0 };
   let copied = 0;
@@ -156,39 +204,71 @@ export function ensureUnpackedApp({ appDir, dryRun = false }) {
   const disabledPath = path.join(resources, 'app.asar.disabled');
   const unpackedRoot = path.join(resources, 'app.asar.unpacked');
 
-  if (fs.existsSync(path.join(appPath, 'dist'))) {
-    return { status: 'already-unpacked', appPath, appDir };
-  }
+  const hasApp = fs.existsSync(path.join(appPath, 'dist'));
+  const hasAsar = fs.existsSync(asarPath);
+  const hasDisabled = fs.existsSync(disabledPath);
 
-  if (!fs.existsSync(asarPath)) {
-    const err = new Error('未找到 resources/app 或 resources/app.asar，请用 --app-dir 指定 Antigravity 安装根目录。');
-    err.code = 'NO_APP_OR_ASAR';
-    throw err;
-  }
-
-  if (fs.existsSync(disabledPath)) {
+  if (hasAsar && hasDisabled) {
     const err = new Error('安装目录已有 app.asar.disabled，本工具不会改动该文件。请先确认安装目录布局后再试。');
     err.code = 'DISABLED_ASAR_EXISTS';
     throw err;
   }
 
-  if (dryRun) {
-    return { status: 'would-unpack', appPath, appDir, asarPath, disabledPath };
+  if (!hasAsar && hasApp) {
+    return { status: 'already-unpacked', appPath, appDir };
   }
 
-  fs.mkdirSync(appPath, { recursive: true });
-  const extractStats = extractAsarFile(asarPath, appPath, {
-    unpackedRoot: fs.existsSync(unpackedRoot) ? unpackedRoot : null,
-  });
-  if (fs.existsSync(unpackedRoot)) {
-    mergeUnpackedDir(unpackedRoot, appPath);
+  if (!hasAsar) {
+    const err = new Error('未找到 resources/app 或 resources/app.asar，请用 --app-dir 指定 Antigravity 安装根目录。');
+    err.code = 'NO_APP_OR_ASAR';
+    throw err;
   }
-  if (!fs.existsSync(path.join(appPath, 'dist'))) {
-    throw new Error('已解包 app.asar，但未找到 dist，已停止后续写入，且尚未重命名 app.asar。');
+
+  // Official app.asar is present and app.asar.disabled is not.
+  // If resources/app already exists, Electron still loads the asar, so refresh from it.
+  if (dryRun) {
+    return {
+      status: hasApp ? 'would-refresh' : 'would-unpack',
+      appPath,
+      appDir,
+      asarPath,
+      disabledPath,
+    };
   }
-  fs.renameSync(asarPath, disabledPath);
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-zh-cn-unpack-'));
+  const tmpApp = path.join(tmpRoot, 'app');
+  let extractStats;
+  try {
+    extractStats = extractAsarFile(asarPath, tmpApp, {
+      unpackedRoot: fs.existsSync(unpackedRoot) ? unpackedRoot : null,
+    });
+    if (fs.existsSync(unpackedRoot)) {
+      mergeUnpackedDir(unpackedRoot, tmpApp);
+    }
+    if (!fs.existsSync(path.join(tmpApp, 'dist'))) {
+      throw new Error('已解包 app.asar，但未找到 dist，已停止后续写入，且尚未重命名 app.asar。');
+    }
+    const oldApp = hasApp ? appPath + '.zh-cn-old' : null;
+    if (oldApp) {
+      removeDir(oldApp);
+      moveDir(appPath, oldApp);
+    }
+    try {
+      moveDir(tmpApp, appPath);
+      fs.renameSync(asarPath, disabledPath);
+      if (oldApp) removeDir(oldApp);
+    } catch (err) {
+      if (oldApp && !fs.existsSync(appPath) && fs.existsSync(oldApp)) {
+        try { moveDir(oldApp, appPath); } catch { /* keep the original error */ }
+      }
+      throw err;
+    }
+  } finally {
+    removeDir(tmpRoot);
+  }
   return {
-    status: 'unpacked',
+    status: hasApp ? 'refreshed' : 'unpacked',
     appPath,
     appDir,
     asarPath: disabledPath,

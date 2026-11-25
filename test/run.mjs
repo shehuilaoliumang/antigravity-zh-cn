@@ -2,6 +2,7 @@ import dictionaryCases from './dictionary.test.mjs';
 import isolationCases from './isolation.test.mjs';
 import idempotencyCases from './idempotency.test.mjs';
 import unpackCases from './unpack.test.mjs';
+import { runWatchTests } from './watch.test.mjs';
 
 const groups = [
   ['词典与正则', dictionaryCases],
@@ -12,7 +13,8 @@ const groups = [
 
 let failed = 0;
 let passed = 0;
-for (const [title, cases] of groups) {
+
+function printGroup(title, cases) {
   console.log('\n== ' + title + ' ==');
   for (const c of cases) {
     if (c.ok) {
@@ -25,5 +27,11 @@ for (const [title, cases] of groups) {
     }
   }
 }
+
+for (const [title, cases] of groups) printGroup(title, cases);
+
+const watchAll = await runWatchTests();
+printGroup('更新检测与等待重打', watchAll);
+
 console.log('\n通过 ' + passed + '，失败 ' + failed);
 process.exit(failed ? 1 : 0);

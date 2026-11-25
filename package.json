@@ -9,6 +9,8 @@
     "test": "node test/run.mjs",
     "apply": "node patch.mjs --apply",
     "restore": "node patch.mjs --restore",
-    "status": "node patch.mjs --status"
+    "status": "node patch.mjs --status",
+    "detect": "node watch.mjs --detect",
+    "watch": "node watch.mjs --run"
   }
 }

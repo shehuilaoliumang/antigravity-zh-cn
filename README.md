@@ -99,13 +99,42 @@ node patch.mjs --restore
 
 若版本已不是 2.35.1，部分原生锚点可能未命中，工具会打印统计并跳过这些项。
 
+## 更新后自动重新打补丁
+
+官方更新常常会重新放下英文的 `app.asar` 并覆盖补丁。可以注册一个**当前用户**计划任务，在登录时和每隔 15 分钟只读检查安装布局、版本 / asar 校验和以及补丁标记：
+
+```powershell
+.\install-watch.ps1
+```
+
+- 若补丁完好，任务立即退出，不会写安装目录。
+- 若发现需要重打（例如又变成打包的 `app.asar`，或 `resources/app` 里的标记消失），且 Antigravity 仍在运行，任务会等待进程自行退出，**不会结束任何进程**，也**不会关闭官方自动更新**。
+- 应用退出后再执行与 `node patch.mjs --apply` 相同的解包 / 刷新 / 写入路径。已有的 `app.asar.disabled` 仍不会被改动；若新的 `app.asar` 与已有 disabled 文件冲突，任务会记录错误并跳过，以免覆盖原始 asar。
+- 任务名称：`AntigravityZhCnReapply`（当前用户，无需管理员）。
+- 日志写在 `%LOCALAPPDATA%\antigravity-zh-cn\watch.log`。
+
+只读检测：
+
+```powershell
+.\watch.ps1 -Detect
+# 或
+node watch.mjs --detect
+```
+
+停用或移除：
+
+```powershell
+Disable-ScheduledTask -TaskName AntigravityZhCnReapply
+.\uninstall-watch.ps1
+```
+
 ## 测试
 
 ```powershell
 node test/run.mjs
 ```
 
-测试覆盖：词典与正则、防误译隔离（聊天正文 / 代码块 / 输入框 / 路径）、在副本上两次 `--apply` 的幂等性、`--restore` 回滚，以及把自造的假 asar 解包为 `resources/app`（不会改动已有的 `app.asar.disabled`）。测试夹具是自造的短锚点文件，**不含**官方源码或官方 asar。
+测试覆盖：词典与正则、防误译隔离（聊天正文 / 代码块 / 输入框 / 路径）、在副本上两次 `--apply` 的幂等性、`--restore` 回滚、把自造的假 asar 解包或刷新为 `resources/app`（不会改动已有的 `app.asar.disabled`），以及更新后检测 / 等待重打（不会结束进程）。测试夹具是自造的短锚点文件，**不含**官方源码或官方 asar。
 
 ## 免责声明
 
@@ -117,7 +146,7 @@ node test/run.mjs
 
 - **[MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)**（MIT License，`Copyright (c) 2026 Antigravity-zh Contributors`）
   - 本项目 `src/dictionary.json` 中 676 条基础译文（668 条原样沿用、8 条润色）及 36 条基础原生菜单映射承接自该项目的 `Antigravity-Patcher.py`。
-  - 其余 1591 条 2.35.0 词条、19 条新增菜单项、13 个主进程/原生壳层文件的 72 处锚点译文、模块化 DOM 隔离引擎、`patch.mjs` / `install.ps1` / `restore.ps1` 与自动化测试均为本仓库独立编写。
+  - 其余 1591 条 2.35.0 词条、19 条新增菜单项、13 个主进程/原生壳层文件的 72 处锚点译文、模块化 DOM 隔离引擎、`patch.mjs` / `watch.mjs` / `install.ps1` / `install-watch.ps1` / `restore.ps1` 与自动化测试均为本仓库独立编写。
   - 完整上游 MIT 协议原文见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 - 感谢 Antigravity 中文汉化社区公开分享的防误译隔离实践（如避开 Markdown 正文、代码编辑器、输入框与 `aria-label` 等通用思路）；本仓库未复制其他社区仓库的源码或词库文件。
 

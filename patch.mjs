@@ -79,7 +79,11 @@ function printHelp() {
     '',
     '若官方更新重新放下了打包的 app.asar 并去掉了 resources/app，',
     '--apply 会在应用未运行时将其解包为 resources/app，再把官方 app.asar',
-    '重命名为 app.asar.disabled。已有的 app.asar.disabled 不会被改动。',
+    '重命名为 app.asar.disabled。若 app.asar 与 resources/app 同时存在',
+    '（Electron 会优先使用 asar），会先用新 asar 刷新 app 再重命名。',
+    '已有的 app.asar.disabled 不会被改动。',
+    '',
+    '更新后自动重打请使用 watch.mjs / install-watch.ps1。',
   ].join('\n');
   console.log(text);
 }
@@ -475,8 +479,10 @@ async function main() {
     const unpacked = ensureUnpackedApp({ appDir, dryRun: opts.dryRun });
     if (unpacked.status === 'unpacked') {
       console.log('已将官方 app.asar 解包为 resources/app，并重命名为 app.asar.disabled。');
-    } else if (unpacked.status === 'would-unpack') {
-      console.log('[dry-run] 将解包官方 app.asar 为 resources/app，并重命名为 app.asar.disabled，然后再写入补丁。');
+    } else if (unpacked.status === 'refreshed') {
+      console.log('已用官方 app.asar 刷新 resources/app，并重命名为 app.asar.disabled。');
+    } else if (unpacked.status === 'would-unpack' || unpacked.status === 'would-refresh') {
+      console.log('[dry-run] 将把官方 app.asar 解包或刷新为 resources/app，并重命名为 app.asar.disabled，然后再写入补丁。');
       return;
     }
     appPath = unpacked.appPath || appPath;
