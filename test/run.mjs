@@ -1,11 +1,13 @@
 import dictionaryCases from './dictionary.test.mjs';
 import isolationCases from './isolation.test.mjs';
 import idempotencyCases from './idempotency.test.mjs';
+import unpackCases from './unpack.test.mjs';
 
 const groups = [
   ['词典与正则', dictionaryCases],
   ['防误译隔离', isolationCases],
   ['幂等与回滚', idempotencyCases],
+  ['解包官方 asar', unpackCases],
 ];
 
 let failed = 0;

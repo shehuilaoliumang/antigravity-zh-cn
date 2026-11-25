@@ -1,8 +1,8 @@
 # Antigravity Desktop 简体中文补丁（antigravity-zh-cn）
 
-面向 **Google Antigravity Desktop 2.35.0** 的开源简体中文汉化补丁。
+面向 **Google Antigravity Desktop 2.35.1** 的开源简体中文汉化补丁。
 
-> **开源出处说明**：本项目的基础词库（676 条）与部分基础菜单映射衍生自 [MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)（MIT License），在此基础上针对 2.35.0 重构了防误译隔离引擎、补齐 13 个原生壳层模块与 1591 条新词条。完整版权与协议声明见下方「出处声明与致谢」、[LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+> **开源出处说明**：本项目的基础词库（676 条）与部分基础菜单映射衍生自 [MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)（MIT License），在此基础上针对 2.35.0 重构了防误译隔离引擎、补齐 13 个原生壳层模块与 1591 条新词条，并已适配 2.35.1。完整版权与协议声明见下方「出处声明与致谢」、[LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 本仓库只包含词库、运行时引擎和补丁工具，**不包含**任何 Antigravity 原版代码、`app.asar` 或 Electron 二进制。所有路径都在运行时解析（Windows 默认 `%LOCALAPPDATA%\Programs\Antigravity`，也可用 `--app-dir` 指定）。
 
@@ -39,7 +39,7 @@
 
 ## 环境要求
 
-- 已安装 Antigravity Desktop 2.35.0（Windows 为主；脚本亦可指向解包后的 `resources/app`）
+- 已安装 Antigravity Desktop 2.35.1（Windows 为主；脚本亦可指向解包后的 `resources/app`）
 - Node.js 18+（无需安装任何 npm 依赖）
 - **写入或回滚前请先正常退出 Antigravity**。若检测到进程仍在运行，工具会拒绝写入，不会强制结束进程
 
@@ -73,7 +73,7 @@ node patch.mjs --apply --app-dir "D:\Apps\Antigravity"
 node patch.mjs --status
 ```
 
-首次成功写入时，工具会把被改文件备份到用户主目录下的 `.antigravity-zh-cn-backup`（不会写入本仓库，也不依赖任何固定用户路径）。
+首次成功写入时，工具会把被改文件备份到用户主目录下的 `.antigravity-zh-cn-backup/<应用版本>`（不会写入本仓库，也不依赖任何固定用户路径）。
 
 ### 试运行
 
@@ -93,7 +93,11 @@ node patch.mjs --restore
 
 ## 官方自动更新之后
 
-在应用内执行「重启以更新」后，官方安装器通常会重新放下英文资源，补丁会被覆盖。那时只需再次运行 `install.ps1` 或 `node patch.mjs --apply`。若版本已不是 2.35.0，部分原生锚点可能未命中，工具会打印统计并跳过这些项。
+在应用内执行「重启以更新」后，官方安装器通常会重新放下英文资源，补丁会被覆盖。那时只需先正常退出应用，再运行 `install.ps1` 或 `node patch.mjs --apply`。
+
+若这次更新把安装布局恢复为打包的 `resources/app.asar` 并去掉了 `resources/app`，`--apply` 会先将官方 asar 解包为 `resources/app`，再把该 asar 重命名为 `app.asar.disabled`，然后写入补丁。本工具 **不会修改** 已经存在的 `resources/app.asar.disabled`。
+
+若版本已不是 2.35.1，部分原生锚点可能未命中，工具会打印统计并跳过这些项。
 
 ## 测试
 
@@ -101,7 +105,7 @@ node patch.mjs --restore
 node test/run.mjs
 ```
 
-测试覆盖：词典与正则、防误译隔离（聊天正文 / 代码块 / 输入框 / 路径）、在副本上两次 `--apply` 的幂等性，以及 `--restore` 回滚。测试夹具是自造的短锚点文件，**不含**官方源码。
+测试覆盖：词典与正则、防误译隔离（聊天正文 / 代码块 / 输入框 / 路径）、在副本上两次 `--apply` 的幂等性、`--restore` 回滚，以及把自造的假 asar 解包为 `resources/app`（不会改动已有的 `app.asar.disabled`）。测试夹具是自造的短锚点文件，**不含**官方源码或官方 asar。
 
 ## 免责声明
 

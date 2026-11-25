@@ -757,6 +757,14 @@ function isSafeGreetingName(name) {
     return swapTrimmed(original, trimmed, prefix + leavingZh);
   }
 
+  function applyAppVersionRules(text) {
+    const original = String(text == null ? '' : text);
+    const trimmed = original.trim();
+    const m = trimmed.match(/^Version\s+(\d+(?:\.\d+){1,3}(?:[-+][A-Za-z0-9.]+)?)$/);
+    if (!m) return original;
+    return swapTrimmed(original, trimmed, '版本 ' + m[1]);
+  }
+
   function translateText(text, options) {
     options = options || {};
     if (text == null) return text;
@@ -782,6 +790,8 @@ function isSafeGreetingName(name) {
     if (afterDanger !== original) return afterDanger;
     const afterLeaving = applyLeavingOnRules(original);
     if (afterLeaving !== original) return afterLeaving;
+    const afterVersion = applyAppVersionRules(original);
+    if (afterVersion !== original) return afterVersion;
     const afterRegex = applyRegexRules(original);
     if (afterRegex !== original) return afterRegex;
     for (let i = 0; i < PREFIX_RULES.length; i++) {

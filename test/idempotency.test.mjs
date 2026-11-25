@@ -47,9 +47,10 @@ test('apply is idempotent and restore rolls back stubs', () => {
   fs.copyFileSync(path.join(appPath, 'dist', 'preload.legacy.js'), path.join(appPath, 'dist', 'preload.js'));
   const before = snapshot(appPath);
 
-  const first = applyToApp({ appPath, dryRun: false });
+  const backupDir = path.join(tmp, 'backup');
+  const first = applyToApp({ appPath, dryRun: false, backupDir });
   const mid = snapshot(appPath);
-  const second = applyToApp({ appPath, dryRun: false });
+  const second = applyToApp({ appPath, dryRun: false, backupDir });
   const again = snapshot(appPath);
 
   assert(JSON.stringify(mid) === JSON.stringify(again), 'second --apply changed files (not idempotent)');

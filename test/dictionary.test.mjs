@@ -1,4 +1,4 @@
-import { translateText, looksLikePathOrId, looksLikeShortcut, applyRegexRules, applyGreetingRules } from '../src/engine.mjs';
+import { translateText, looksLikePathOrId, looksLikeShortcut, applyRegexRules, applyGreetingRules, applyAppVersionRules } from '../src/engine.mjs';
 import dictionary from '../src/dictionary.json' with { type: 'json' };
 
 const cases = [];
@@ -512,6 +512,22 @@ test('informal Hey/Hi/Hello greetings with placeholder names only', () => {
   assert(translateText('What should we build today?') === '今天我们做点什么？');
   assert(translateText('Hello World') === 'Hello World');
   assert(applyGreetingRules('Hey C:\\Users\\demo\\Downloads, what should we build today?') === 'Hey C:\\Users\\demo\\Downloads, what should we build today?');
+});
+
+test('title-menu Version prefix from official Hub template', () => {
+  assert(translateText('Version 2.35.1') === '版本 2.35.1');
+  assert(translateText('Version 2.35.0') === '版本 2.35.0');
+  assert(translateText('  Version 2.35.1  ') === '  版本 2.35.1  ');
+  assert(applyAppVersionRules('Version 2.35.1') === '版本 2.35.1');
+  // Bare dictionary entry still works
+  assert(translateText('Version') === '版本');
+  // Do not invent translations for non-version labels
+  assert(translateText('Version history') === 'Version history');
+  assert(translateText('version 2.35.1') === 'version 2.35.1');
+  assert(translateText('Workspace') === '工作区');
+  assert(translateText('View') === '视图');
+  assert(translateText('Window') === '窗口');
+  assert(translateText('Check for Updates') === '检查更新');
 });
 
 export default cases;

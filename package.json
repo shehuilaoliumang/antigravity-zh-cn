@@ -2,7 +2,7 @@
   "name": "antigravity-zh-cn",
   "version": "1.0.0",
   "private": false,
-  "description": "Simplified Chinese localization patch for Google Antigravity Desktop 2.35.0",
+  "description": "Simplified Chinese localization patch for Google Antigravity Desktop 2.35.1",
   "type": "module",
   "license": "MIT",
   "scripts": {

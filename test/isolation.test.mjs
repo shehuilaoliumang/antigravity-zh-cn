@@ -318,4 +318,13 @@ test('native select option labels: All Workspaces is translated, placeholder wor
   assert(aria.getAttribute('aria-label') === 'All Workspaces');
 });
 
+test('title-menu Version text is translated; aria-label is not rewritten', () => {
+  assert(translateText('Version 2.35.1') === '版本 2.35.1');
+  const btn = el('button', { 'aria-label': 'Version 2.35.1', 'data-testid': 'settings-app-version-caption' });
+  assert(btn.getAttribute('aria-label') === 'Version 2.35.1');
+  assert(translateText('Version 2.35.1') !== btn.getAttribute('aria-label'));
+  const chat = el('div', { 'data-markdown-root': '' });
+  assert(shouldSkipElement(chat) === true);
+});
+
 export default cases;

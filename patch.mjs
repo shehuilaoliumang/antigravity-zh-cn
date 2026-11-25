@@ -25,10 +25,26 @@ import {
   MARKER_END,
   LEGACY_ENGINE,
 } from './src/native-patches.mjs';
+import { ensureUnpackedApp } from './src/asar.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const BACKUP_DIR = path.join(os.homedir(), '.antigravity-zh-cn-backup');
-const MANIFEST = path.join(BACKUP_DIR, 'manifest.json');
+const BACKUP_ROOT = path.join(os.homedir(), '.antigravity-zh-cn-backup');
+
+export function readAppVersion(appPath) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(appPath, 'package.json'), 'utf8'));
+    const v = String(pkg.version || '').trim();
+    if (/^\d+\.\d+/.test(v)) return v;
+  } catch {
+    // fixtures and incomplete trees may omit package.json
+  }
+  return 'unknown';
+}
+
+export function backupDirForApp(appPath, explicit) {
+  if (explicit) return path.resolve(explicit);
+  return path.join(BACKUP_ROOT, readAppVersion(appPath));
+}
 
 function parseArgs(argv) {
   const opts = { apply: false, restore: false, status: false, dryRun: false, appDir: null };
@@ -51,7 +67,7 @@ function parseArgs(argv) {
 
 function printHelp() {
   const text = [
-    'Antigravity Desktop 简体中文补丁（2.35.0）',
+    'Antigravity Desktop 简体中文补丁（2.35.1）',
     '',
     '用法：',
     '  node patch.mjs --apply [--app-dir <path>] [--dry-run]',
@@ -60,6 +76,10 @@ function printHelp() {
     '',
     '默认安装目录由环境变量 LOCALAPPDATA（Windows）或常见用户目录解析，',
     '也可用 --app-dir 显式指定 Antigravity 安装根目录。',
+    '',
+    '若官方更新重新放下了打包的 app.asar 并去掉了 resources/app，',
+    '--apply 会在应用未运行时将其解包为 resources/app，再把官方 app.asar',
+    '重命名为 app.asar.disabled。已有的 app.asar.disabled 不会被改动。',
   ].join('\n');
   console.log(text);
 }
@@ -154,6 +174,8 @@ export function buildMenuSnippet() {
     '    if (!menuItem) return;',
     '    if (menuItem.label && menuTranslationMap[menuItem.label]) {',
     '      menuItem.label = menuTranslationMap[menuItem.label];',
+    '    } else if (typeof menuItem.label === "string" && /^Version\\s+(\\d+(?:\\.\\d+){1,3}(?:[-+][A-Za-z0-9.]+)?)$/.test(menuItem.label)) {',
+    '      menuItem.label = menuItem.label.replace(/^Version\\s+/, "版本 ");',
     '    }',
     '    const sub = menuItem.submenu;',
     '    if (sub && Array.isArray(sub.items)) sub.items.forEach(translateMenu);',
@@ -193,20 +215,20 @@ export function buildMenuSnippet() {
   ].join('\n');
 }
 
-function ensureBackup(rel, content, dryRun) {
-  const dest = path.join(BACKUP_DIR, rel.replace(/[\\/]/g, '__'));
+function ensureBackup(backupDir, rel, content, dryRun) {
+  const dest = path.join(backupDir, rel.replace(/[\\/]/g, '__'));
   if (fs.existsSync(dest)) return { created: false, dest };
   if (!dryRun) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    fs.mkdirSync(backupDir, { recursive: true });
     fs.writeFileSync(dest, content, 'utf8');
   }
   return { created: true, dest };
 }
 
-function writeManifest(data, dryRun) {
+function writeManifest(backupDir, data, dryRun) {
   if (dryRun) return;
-  fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  fs.writeFileSync(MANIFEST, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  fs.mkdirSync(backupDir, { recursive: true });
+  fs.writeFileSync(path.join(backupDir, 'manifest.json'), JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
 function applyNativeReplacements(text, replacements, stats) {
@@ -250,13 +272,15 @@ function patchTray(text, mode) {
   return out;
 }
 
-export function applyToApp({ appPath, dryRun }) {
+export function applyToApp({ appPath, dryRun, backupDir }) {
+  const backupRoot = backupDirForApp(appPath, backupDir);
   const stats = {
     files: [],
     dictionarySize: Object.keys(dictionary).length,
     menuMapSize: Object.keys(MENU_MAP).length,
     prefixRules: PREFIX_RULES.length,
     coreWords: Object.keys(CORE_WORDS).length,
+    backupDir: backupRoot,
     hit: [],
     skip: [],
     miss: [],
@@ -275,7 +299,7 @@ export function applyToApp({ appPath, dryRun }) {
   // preload
   {
     const raw = fs.readFileSync(preloadPath, 'utf8');
-    ensureBackup('dist/preload.js', raw, dryRun);
+    ensureBackup(backupRoot, 'dist/preload.js', raw, dryRun);
     const official = stripInjections(raw);
     const next = official.replace(/\s+$/, '\n') + '\n' + buildPreloadSnippet();
     writes.push({ rel: 'dist/preload.js', path: preloadPath, next, prev: raw });
@@ -283,7 +307,7 @@ export function applyToApp({ appPath, dryRun }) {
   // menu
   {
     const raw = fs.readFileSync(menuPath, 'utf8');
-    ensureBackup('dist/menu.js', raw, dryRun);
+    ensureBackup(backupRoot, 'dist/menu.js', raw, dryRun);
     const official = stripInjections(raw);
     const next = official.replace(/\s+$/, '\n') + '\n' + buildMenuSnippet();
     writes.push({ rel: 'dist/menu.js', path: menuPath, next, prev: raw });
@@ -291,7 +315,7 @@ export function applyToApp({ appPath, dryRun }) {
   // tray
   {
     const raw = fs.readFileSync(trayPath, 'utf8');
-    ensureBackup('dist/tray.js', raw, dryRun);
+    ensureBackup(backupRoot, 'dist/tray.js', raw, dryRun);
     const next = patchTray(raw, 'apply');
     writes.push({ rel: 'dist/tray.js', path: trayPath, next, prev: raw });
   }
@@ -303,7 +327,7 @@ export function applyToApp({ appPath, dryRun }) {
       continue;
     }
     const raw = fs.readFileSync(filePath, 'utf8');
-    ensureBackup(group.file, raw, dryRun);
+    ensureBackup(backupRoot, group.file, raw, dryRun);
     const fileStats = { hit: [], skip: [], miss: [] };
     const next = applyNativeReplacements(raw, group.replacements, fileStats);
     stats.hit.push(...fileStats.hit.map((x) => ({ file: group.file, ...x })));
@@ -324,9 +348,10 @@ export function applyToApp({ appPath, dryRun }) {
     }
   }
 
-  writeManifest({
+  writeManifest(backupRoot, {
     createdAt: new Date().toISOString(),
     appPath,
+    appVersion: readAppVersion(appPath),
     files: stats.files.map((f) => f.file),
   }, dryRun);
 
@@ -396,8 +421,14 @@ export function statusOfApp({ appPath }) {
     }
     report.files.push({ file: rel, state });
   }
-  report.backupDir = BACKUP_DIR;
-  report.backupExists = fs.existsSync(MANIFEST);
+  const backupRoot = backupDirForApp(appPath);
+  report.appVersion = readAppVersion(appPath);
+  report.backupDir = backupRoot;
+  report.backupExists = fs.existsSync(path.join(backupRoot, 'manifest.json'));
+  const resources = path.dirname(appPath);
+  report.layout = fs.existsSync(path.join(appPath, 'dist'))
+    ? 'unpacked-app'
+    : (fs.existsSync(path.join(resources, 'app.asar')) ? 'packed-asar' : 'missing');
   return report;
 }
 
@@ -424,7 +455,8 @@ async function main() {
     printHelp();
     process.exit(opts.apply || opts.restore || opts.status ? 0 : 1);
   }
-  const { appPath, appDir } = appRoot(resolveAppDir(opts.appDir));
+  const appDir = resolveAppDir(opts.appDir);
+  let { appPath } = appRoot(appDir);
   console.log('安装根目录：' + appDir);
   console.log('应用目录：  ' + appPath);
 
@@ -440,10 +472,18 @@ async function main() {
   }
 
   if (opts.apply) {
+    const unpacked = ensureUnpackedApp({ appDir, dryRun: opts.dryRun });
+    if (unpacked.status === 'unpacked') {
+      console.log('已将官方 app.asar 解包为 resources/app，并重命名为 app.asar.disabled。');
+    } else if (unpacked.status === 'would-unpack') {
+      console.log('[dry-run] 将解包官方 app.asar 为 resources/app，并重命名为 app.asar.disabled，然后再写入补丁。');
+      return;
+    }
+    appPath = unpacked.appPath || appPath;
     const stats = applyToApp({ appPath, dryRun: opts.dryRun });
     printStats(stats, opts.dryRun);
     if (stats.miss.length) {
-      console.warn('存在未命中的锚点，请检查版本是否为 Antigravity Desktop 2.35.0。未命中项已跳过，其余补丁仍已处理。');
+      console.warn('存在未命中的锚点，请检查版本是否为 Antigravity Desktop 2.35.1。未命中项已跳过，其余补丁仍已处理。');
     }
     return;
   }

@@ -902,6 +902,16 @@ export function applyLeavingOnRules(text) {
   return swapTrimmed(original, trimmed, prefix + leavingZh);
 }
 
+// Official Hub title-menu bar uses label:`Version ${c.appVersion}`
+// and a visible text node `Version ${d}` (e.g. Version 2.35.1).
+export function applyAppVersionRules(text) {
+  const original = String(text ?? '');
+  const trimmed = original.trim();
+  const m = trimmed.match(/^Version\s+(\d+(?:\.\d+){1,3}(?:[-+][A-Za-z0-9.]+)?)$/);
+  if (!m) return original;
+  return swapTrimmed(original, trimmed, '版本 ' + m[1]);
+}
+
 export function translateText(text, options = {}) {
   if (text == null) return text;
   const original = String(text);
@@ -935,6 +945,9 @@ export function translateText(text, options = {}) {
 
   const afterLeaving = applyLeavingOnRules(original);
   if (afterLeaving !== original) return afterLeaving;
+
+  const afterVersion = applyAppVersionRules(original);
+  if (afterVersion !== original) return afterVersion;
 
   const afterRegex = applyRegexRules(original);
   if (afterRegex !== original) return afterRegex;
