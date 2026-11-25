@@ -1,4 +1,4 @@
-# Antigravity Desktop 简体中文补丁 - 更新检测与等待重打
+﻿# Antigravity Desktop 简体中文补丁 - 更新检测与等待重打
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 

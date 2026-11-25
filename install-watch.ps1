@@ -1,5 +1,6 @@
-# Antigravity Desktop 简体中文补丁 - 注册当前用户计划任务
-# 无需管理员。不会改动 Antigravity 安装目录，也不会关闭官方更新。
+﻿# Antigravity Desktop zh-CN patch - register a current-user scheduled task.
+# No administrator required. Does not modify the Antigravity install directory
+# and does not disable official updates.
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -9,40 +10,28 @@ $TaskName = 'AntigravityZhCnReapply'
 $IntervalMinutes = 15
 
 if (-not (Test-Path -LiteralPath $Watch)) {
-    throw "未找到 watch.ps1：$Watch"
+    throw 'watch.ps1 not found'
 }
 
-$arg = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Watch`""
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg -WorkingDirectory $Root
+# A logon trigger often requires elevation on current Windows builds.
+# schtasks /SC MINUTE creates an indefinite 15-minute trigger in the
+# current user's task folder, which does not need administrator rights.
+$tr = 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $Watch + '"'
+$out = & schtasks.exe /Create /TN $TaskName /TR $tr /SC MINUTE /MO $IntervalMinutes /F /RL LIMITED 2>&1
+if ($LASTEXITCODE -ne 0) {
+    throw ('Register-ScheduledTask failed: ' + ($out | Out-String).Trim())
+}
 
-$interval = New-TimeSpan -Minutes $IntervalMinutes
-$duration = New-TimeSpan -Days 3650
-$start = (Get-Date).AddMinutes(1)
-$repeat = New-ScheduledTaskTrigger -Once -At $start -RepetitionInterval $interval -RepetitionDuration $duration
-$logon = New-ScheduledTaskTrigger -AtLogOn
+$task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+if ($task.State -eq 'Disabled') {
+    throw "Scheduled task $TaskName was created but is disabled."
+}
 
-$settings = New-ScheduledTaskSettingsSet `
-    -AllowStartIfOnBatteries `
-    -DontStopIfGoingOnBatteries `
-    -StartWhenAvailable `
-    -ExecutionTimeLimit (New-TimeSpan -Hours 8) `
-    -MultipleInstances IgnoreNew
-
-$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
-
-Register-ScheduledTask -TaskName $TaskName `
-    -Action $action `
-    -Trigger @($logon, $repeat) `
-    -Settings $settings `
-    -Principal $principal `
-    -Description 'Detect a wiped Antigravity zh-CN patch after an official update and re-apply it only after Antigravity has exited. Never kills the app and never disables official updates.' `
-    -Force | Out-Null
-
-Write-Host "已注册当前用户计划任务：$TaskName"
-Write-Host "将在登录时以及大约每 $IntervalMinutes 分钟检查一次。"
-Write-Host "若检测到补丁被官方更新覆盖，会等待 Antigravity 自行退出后再重打，不会结束进程。"
-Write-Host "日志：%LOCALAPPDATA%\antigravity-zh-cn\watch.log"
+Write-Host "Registered current-user scheduled task: $TaskName"
+Write-Host "It checks the install layout and patch markers about every $IntervalMinutes minutes."
+Write-Host "If an official update wipes the patch, it waits for Antigravity to exit, then re-applies. It never kills processes."
+Write-Host "Log: %LOCALAPPDATA%\antigravity-zh-cn\watch.log"
 Write-Host ""
-Write-Host "停用（保留任务定义）：Disable-ScheduledTask -TaskName $TaskName"
-Write-Host "移除：               .\uninstall-watch.ps1"
-Write-Host "手动只读检测：       .\watch.ps1 -Detect"
+Write-Host "Disable (keep task definition): Disable-ScheduledTask -TaskName $TaskName"
+Write-Host "Remove:                        .\uninstall-watch.ps1"
+Write-Host "Manual read-only detect:       .\watch.ps1 -Detect"

@@ -101,7 +101,7 @@ node patch.mjs --restore
 
 ## 更新后自动重新打补丁
 
-官方更新常常会重新放下英文的 `app.asar` 并覆盖补丁。可以注册一个**当前用户**计划任务，在登录时和每隔 15 分钟只读检查安装布局、版本 / asar 校验和以及补丁标记：
+官方更新常常会重新放下英文的 `app.asar` 并覆盖补丁。可以注册一个**当前用户**计划任务，每隔 15 分钟只读检查安装布局、版本 / asar 校验和以及补丁标记（无需管理员；部分环境下“登录时触发”需要提升权限，因此改用无限期的分钟周期任务）：
 
 ```powershell
 .\install-watch.ps1
@@ -110,7 +110,7 @@ node patch.mjs --restore
 - 若补丁完好，任务立即退出，不会写安装目录。
 - 若发现需要重打（例如又变成打包的 `app.asar`，或 `resources/app` 里的标记消失），且 Antigravity 仍在运行，任务会等待进程自行退出，**不会结束任何进程**，也**不会关闭官方自动更新**。
 - 应用退出后再执行与 `node patch.mjs --apply` 相同的解包 / 刷新 / 写入路径。已有的 `app.asar.disabled` 仍不会被改动；若新的 `app.asar` 与已有 disabled 文件冲突，任务会记录错误并跳过，以免覆盖原始 asar。
-- 任务名称：`AntigravityZhCnReapply`（当前用户，无需管理员）。
+- 任务名称：`AntigravityZhCnReapply`（当前用户，大约每 15 分钟运行一次，无需管理员）。
 - 日志写在 `%LOCALAPPDATA%\antigravity-zh-cn\watch.log`。
 
 只读检测：

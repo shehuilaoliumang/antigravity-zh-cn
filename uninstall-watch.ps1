@@ -1,4 +1,4 @@
-# Antigravity Desktop 简体中文补丁 - 移除当前用户计划任务
+﻿# Antigravity Desktop 简体中文补丁 - 移除当前用户计划任务
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
