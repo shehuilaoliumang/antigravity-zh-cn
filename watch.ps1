@@ -1,6 +1,7 @@
 ﻿# Antigravity Desktop 简体中文补丁 - 更新检测与等待重打
+# Manual helper. The scheduled task uses watch-hidden.vbs instead, so it
+# does not flash a PowerShell console.
 $ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
@@ -22,12 +23,14 @@ function Find-Node {
 $Mode = '--run'
 foreach ($a in $args) {
     if ($a -eq '-Detect' -or $a -eq '--detect') { $Mode = '--detect' }
+    elseif ($a -eq '-Daemon' -or $a -eq '--daemon') { $Mode = '--daemon' }
+    elseif ($a -eq '-Stop' -or $a -eq '--stop') { $Mode = '--stop' }
 }
 
 $Node = Find-Node
 $watchArgs = @('watch.mjs', $Mode)
 foreach ($a in $args) {
-    if ($a -eq '-Detect' -or $a -eq '--detect') { continue }
+    if ($a -eq '-Detect' -or $a -eq '--detect' -or $a -eq '-Daemon' -or $a -eq '--daemon' -or $a -eq '-Stop' -or $a -eq '--stop') { continue }
     $watchArgs += $a
 }
 & $Node @watchArgs

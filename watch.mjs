@@ -3,8 +3,10 @@
  * Detect whether an official Antigravity update wiped the zh-CN patch,
  * and re-apply it only after the app has fully exited.
  *
- *   node watch.mjs --detect [--app-dir <path>]
- *   node watch.mjs --run    [--app-dir <path>] [--dry-run]
+ *   node watch.mjs --detect  [--app-dir <path>]
+ *   node watch.mjs --run     [--app-dir <path>] [--dry-run]
+ *   node watch.mjs --daemon  [--app-dir <path>] [--dry-run]
+ *   node watch.mjs --stop
  *
  * This tool never kills Antigravity processes and never disables official updates.
  */
@@ -16,21 +18,31 @@ import { fileURLToPath } from 'node:url';
 import { resolveAppDir, isAntigravityRunning, applyToApp, appRoot } from './patch.mjs';
 import { ensureUnpackedApp } from './src/asar.mjs';
 import { inspectInstall, runReapplyCycle } from './src/detect.mjs';
+import {
+  acquireSingleton,
+  attachFsWatch,
+  requestStop,
+  resolveWatchDir,
+  runDaemon,
+} from './src/watch-daemon.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 function parseArgs(argv) {
-  const opts = { detect: false, run: false, dryRun: false, appDir: null, help: false };
+  const opts = { detect: false, run: false, daemon: false, stop: false, dryRun: false, appDir: null, help: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--detect') opts.detect = true;
     else if (a === '--run') opts.run = true;
+    else if (a === '--daemon') opts.daemon = true;
+    else if (a === '--stop') opts.stop = true;
     else if (a === '--dry-run') opts.dryRun = true;
     else if (a === '--app-dir') opts.appDir = argv[++i];
     else if (a === '--help' || a === '-h') opts.help = true;
     else throw new Error('未知参数：' + a);
   }
-  if (opts.help || [opts.detect, opts.run].filter(Boolean).length !== 1) opts.help = true;
+  const modes = [opts.detect, opts.run, opts.daemon, opts.stop].filter(Boolean).length;
+  if (opts.help || modes !== 1) opts.help = true;
   return opts;
 }
 
@@ -39,14 +51,20 @@ function printHelp() {
     'Antigravity Desktop 简体中文补丁 - 更新后检测与自动重打',
     '',
     '用法：',
-    '  node watch.mjs --detect [--app-dir <path>]',
-    '  node watch.mjs --run    [--app-dir <path>] [--dry-run]',
+    '  node watch.mjs --detect  [--app-dir <path>]',
+    '  node watch.mjs --run     [--app-dir <path>] [--dry-run]',
+    '  node watch.mjs --daemon  [--app-dir <path>] [--dry-run]',
+    '  node watch.mjs --stop',
     '',
     '— --detect  只读检查版本 / 布局 / 补丁标记，不会写入安装目录。',
     '— --run     若需要重打且应用已退出，则调用与 patch.mjs --apply 相同的写入路径；',
     '            若应用仍在运行，则等待其自行退出后再写入。本工具不会结束进程。',
+    '— --daemon  登录后常驻：启动时检查一次，之后监听安装目录变化。',
+    '            会话中途更新若立刻用英文重新打开，会等到进程全部退出后再写入，',
+    '            以便下一次启动恢复中文。不会在应用运行时写入。',
+    '— --stop    请求已在运行的守护进程退出。',
     '',
-    '推荐用 install-watch.ps1 注册当前用户计划任务（无需管理员），',
+    '推荐用 install-watch.ps1 注册当前用户在登录时静默启动的计划任务（无需管理员），',
     '用 uninstall-watch.ps1 移除。',
   ].join('\n'));
 }
@@ -96,11 +114,48 @@ function publicReport(report, extra) {
   };
 }
 
+function applyOnce(appDir) {
+  const unpacked = ensureUnpackedApp({ appDir, dryRun: false });
+  const appPath = unpacked.appPath || appRoot(appDir).appPath;
+  return applyToApp({ appPath, dryRun: false });
+}
+
+function pidFilePath() {
+  return path.join(stateDir(), 'watch.pid');
+}
+
+function writePidFile() {
+  fs.mkdirSync(stateDir(), { recursive: true });
+  fs.writeFileSync(pidFilePath(), JSON.stringify({
+    pid: process.pid,
+    startedAt: new Date().toISOString(),
+  }), 'utf8');
+}
+
+function clearPidFile() {
+  try {
+    const file = pidFilePath();
+    if (!fs.existsSync(file)) return;
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (raw && raw.pid === process.pid) fs.rmSync(file, { force: true });
+  } catch {
+    // ignore
+  }
+}
+
 async function main() {
   const opts = parseArgs(process.argv);
   if (opts.help) {
     printHelp();
-    process.exit(opts.detect || opts.run ? 0 : 1);
+    process.exit(opts.detect || opts.run || opts.daemon || opts.stop ? 0 : 1);
+  }
+
+  if (opts.stop) {
+    const ok = await requestStop();
+    const msg = ok ? 'sent-stop' : 'daemon-not-running';
+    console.log(msg);
+    appendLog(msg);
+    process.exit(0);
   }
 
   const appDir = resolveAppDir(opts.appDir);
@@ -116,14 +171,45 @@ async function main() {
     process.exit(0);
   }
 
+  if (opts.daemon) {
+    let stop = false;
+    const server = await acquireSingleton({
+      onStop: () => { stop = true; },
+    });
+    if (!server) {
+      console.log('daemon-already-running');
+      appendLog('daemon-already-running');
+      process.exit(0);
+    }
+    writePidFile();
+    const cleanup = () => {
+      try { server.close(); } catch { /* ignore */ }
+      clearPidFile();
+    };
+    process.on('exit', cleanup);
+    process.on('SIGINT', () => { stop = true; });
+    process.on('SIGTERM', () => { stop = true; });
+    appendLog('daemon-start');
+    await runDaemon({
+      inspect,
+      isRunning: isAntigravityRunning,
+      apply: () => applyOnce(appDir),
+      log: (msg) => {
+        console.log(msg);
+        appendLog(msg);
+      },
+      watch: async ({ onEvent }) => attachFsWatch(resolveWatchDir(appDir), onEvent),
+      shouldStop: () => stop,
+      dryRun: opts.dryRun,
+    });
+    cleanup();
+    process.exit(0);
+  }
+
   const result = await runReapplyCycle({
     inspect,
     isRunning: isAntigravityRunning,
-    apply: () => {
-      const unpacked = ensureUnpackedApp({ appDir, dryRun: false });
-      const appPath = unpacked.appPath || appRoot(appDir).appPath;
-      return applyToApp({ appPath, dryRun: false });
-    },
+    apply: () => applyOnce(appDir),
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     dryRun: opts.dryRun,
     log: (msg) => {

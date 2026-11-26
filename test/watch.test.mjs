@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packAsar, ensureUnpackedApp } from '../src/asar.mjs';
 import { inspectInstall, planReapply, runReapplyCycle } from '../src/detect.mjs';
+import { installFingerprint, runDaemon, shouldIgnoreWatchRel } from '../src/watch-daemon.mjs';
 import { applyToApp } from '../patch.mjs';
 import { MARKER_BEGIN } from '../src/native-patches.mjs';
 
@@ -218,6 +219,123 @@ testAsync('runReapplyCycle dry-run and noop do not apply', async () => {
   });
   assert(blocked.plan.action === 'blocked');
   assert(applied === 0);
+});
+
+
+test('installFingerprint changes with layout, hash and patch state', () => {
+  const packed = {
+    appVersion: '2.35.2',
+    layout: 'packed-asar',
+    hasApp: false,
+    hasAsar: true,
+    hasDisabled: false,
+    asarSha256: 'aaa',
+    patched: false,
+    needsApply: true,
+    reasons: ['packed-asar'],
+  };
+  const packedNew = { ...packed, asarSha256: 'bbb' };
+  const unpacked = {
+    ...packed,
+    layout: 'unpacked-app',
+    hasApp: true,
+    hasAsar: false,
+    hasDisabled: true,
+    asarSha256: null,
+    patched: true,
+    needsApply: false,
+    reasons: [],
+  };
+  assert(installFingerprint(packed) !== installFingerprint(packedNew), 'hash must change fingerprint');
+  assert(installFingerprint(packed) !== installFingerprint(unpacked), 'layout must change fingerprint');
+  assert(installFingerprint(unpacked) === installFingerprint({ ...unpacked }), 'stable fingerprint');
+  assert(shouldIgnoreWatchRel('node_modules/foo.js') === true);
+  assert(shouldIgnoreWatchRel('app.asar') === false);
+  assert(shouldIgnoreWatchRel('dist/preload.js.tmp') === true);
+});
+
+testAsync('runDaemon applies at startup and again after an install fingerprint change', async () => {
+  let t = 0;
+  let applied = 0;
+  let layout = 'packed-asar';
+  let stop = false;
+  let fire = null;
+  const inspect = () => ({
+    appVersion: '2.35.2',
+    layout,
+    hasApp: layout === 'unpacked-app',
+    hasAsar: layout === 'packed-asar',
+    hasDisabled: layout !== 'packed-asar',
+    asarSha256: layout === 'packed-asar' ? 'abc' : null,
+    patched: layout === 'unpacked-app',
+    needsApply: layout === 'packed-asar',
+    blocked: false,
+    reasons: layout === 'packed-asar' ? ['packed-asar'] : [],
+  });
+  const pending = runDaemon({
+    inspect,
+    isRunning: () => false,
+    apply: () => { applied += 1; layout = 'unpacked-app'; },
+    now: () => t,
+    sleep: async (ms) => {
+      t += ms;
+      if (applied === 1 && fire && t >= 5 && t < 20) {
+        layout = 'packed-asar';
+        fire('app.asar');
+      }
+      if (applied >= 2 || t >= 80) stop = true;
+    },
+    debounceMs: 10,
+    pollMs: 5,
+    shouldStop: () => stop,
+    watch: async ({ onEvent }) => {
+      fire = onEvent;
+      return () => {};
+    },
+    log: () => {},
+  });
+  const result = await pending;
+  assert(applied === 2, 'expected two applies, got ' + applied);
+  assert(result.lastFingerprint.includes('unpacked-app'), result.lastFingerprint);
+});
+
+testAsync('runDaemon waits for a clean quit and does not apply while running', async () => {
+  let t = 0;
+  let applied = 0;
+  let running = true;
+  let stop = false;
+  const result = await runDaemon({
+    inspect: () => ({
+      appVersion: '2.35.2',
+      layout: 'packed-asar',
+      hasApp: false,
+      hasAsar: true,
+      hasDisabled: false,
+      asarSha256: 'abc',
+      patched: false,
+      needsApply: true,
+      blocked: false,
+      reasons: ['packed-asar'],
+    }),
+    isRunning: () => running,
+    apply: () => {
+      if (running) throw new Error('must not apply while running');
+      applied += 1;
+    },
+    now: () => t,
+    sleep: async (ms) => {
+      t += ms;
+      if (t >= 30) running = false;
+      if (applied >= 1 || t >= 80) stop = true;
+    },
+    debounceMs: 10,
+    pollMs: 10,
+    shouldStop: () => stop,
+    watch: async () => () => {},
+    log: () => {},
+  });
+  assert(applied === 1, 'expected apply after exit, got ' + applied);
+  assert(result.lastFingerprint.length > 0);
 });
 
 export async function runWatchTests() {

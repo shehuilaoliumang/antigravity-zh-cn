@@ -2,7 +2,7 @@
   "name": "antigravity-zh-cn",
   "version": "1.0.0",
   "private": false,
-  "description": "Simplified Chinese localization patch for Google Antigravity Desktop 2.35.1",
+  "description": "Simplified Chinese localization patch for Google Antigravity Desktop 2.35.2",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -11,6 +11,7 @@
     "restore": "node patch.mjs --restore",
     "status": "node patch.mjs --status",
     "detect": "node watch.mjs --detect",
-    "watch": "node watch.mjs --run"
+    "watch": "node watch.mjs --run",
+    "daemon": "node watch.mjs --daemon"
   }
 }

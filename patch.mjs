@@ -489,7 +489,7 @@ async function main() {
     const stats = applyToApp({ appPath, dryRun: opts.dryRun });
     printStats(stats, opts.dryRun);
     if (stats.miss.length) {
-      console.warn('存在未命中的锚点，请检查版本是否为 Antigravity Desktop 2.35.1。未命中项已跳过，其余补丁仍已处理。');
+      console.warn('存在未命中的锚点，请检查版本是否为 Antigravity Desktop 2.35.2。未命中项已跳过，其余补丁仍已处理。');
     }
     return;
   }
