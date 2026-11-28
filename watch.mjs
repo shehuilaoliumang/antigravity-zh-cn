@@ -20,10 +20,10 @@ import { ensureUnpackedApp } from './src/asar.mjs';
 import { inspectInstall, runReapplyCycle } from './src/detect.mjs';
 import {
   acquireSingleton,
-  attachFsWatch,
+  createReattachingWatch,
   requestStop,
-  resolveWatchDir,
   runDaemon,
+  watchDirsFor,
 } from './src/watch-daemon.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -198,7 +198,12 @@ async function main() {
         console.log(msg);
         appendLog(msg);
       },
-      watch: async ({ onEvent }) => attachFsWatch(resolveWatchDir(appDir), onEvent),
+      watch: createReattachingWatch(() => watchDirsFor(appDir), {
+        log: (msg) => {
+          console.log(msg);
+          appendLog(msg);
+        },
+      }),
       shouldStop: () => stop,
       dryRun: opts.dryRun,
     });

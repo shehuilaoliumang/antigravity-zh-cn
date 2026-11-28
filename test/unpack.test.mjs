@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { packAsar, extractAsarBuffer, ensureUnpackedApp } from '../src/asar.mjs';
+import { packAsar, extractAsarBuffer, ensureUnpackedApp, retiredDisabledName, sha256File } from '../src/asar.mjs';
 import { applyToApp, statusOfApp } from '../patch.mjs';
 import { MARKER_BEGIN } from '../src/native-patches.mjs';
 
@@ -40,7 +40,7 @@ test('packAsar + extractAsarBuffer is lossless for fixture files', () => {
   }
 });
 
-test('ensureUnpackedApp restores app layout and refuses to touch app.asar.disabled', () => {
+test('ensureUnpackedApp restores app layout and retires an existing app.asar.disabled', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-unpack-'));
   const resources = path.join(tmp, 'resources');
   fs.mkdirSync(resources, { recursive: true });
@@ -64,18 +64,26 @@ test('ensureUnpackedApp restores app layout and refuses to touch app.asar.disabl
   const again = ensureUnpackedApp({ appDir: tmp, dryRun: false });
   assert(again.status === 'already-unpacked', 'second call should see unpacked app');
 
-  // Recreate a packed layout but leave the previous disabled file in place
+  // Recreate a packed layout but leave the previous disabled file in place.
+  // The old disabled file must be renamed aside, not overwritten or deleted.
   const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-unpack-disabled-'));
   const res2 = path.join(tmp2, 'resources');
   fs.mkdirSync(res2, { recursive: true });
   fs.writeFileSync(path.join(res2, 'app.asar'), asarBuf);
-  fs.writeFileSync(path.join(res2, 'app.asar.disabled'), Buffer.from('PRISTINE-DISABLED'));
-  let threw = null;
-  try { ensureUnpackedApp({ appDir: tmp2, dryRun: false }); }
-  catch (err) { threw = err; }
-  assert(threw && threw.code === 'DISABLED_ASAR_EXISTS', 'should refuse when disabled asar exists');
-  assert(fs.readFileSync(path.join(res2, 'app.asar.disabled')).equals(Buffer.from('PRISTINE-DISABLED')), 'disabled asar was modified');
-  assert(!fs.existsSync(path.join(res2, 'app', 'dist')), 'should not unpack when disabled exists');
+  const pristine = Buffer.from('PRISTINE-DISABLED');
+  const disabledPath = path.join(res2, 'app.asar.disabled');
+  fs.writeFileSync(disabledPath, pristine);
+  const oldSha = sha256File(disabledPath);
+  const expectedRetired = path.join(res2, retiredDisabledName({ version: 'unknown', sha256: oldSha }));
+  const result = ensureUnpackedApp({ appDir: tmp2, dryRun: false });
+  assert(result.status === 'unpacked', 'status=' + result.status);
+  assert(result.retired && result.retired.status === 'retired', 'expected retired');
+  assert(!fs.existsSync(disabledPath) || fs.statSync(disabledPath).size === asarBuf.length, 'new disabled should be the new asar');
+  assert(fs.existsSync(expectedRetired), 'missing retired backup ' + path.basename(expectedRetired));
+  assert(fs.readFileSync(expectedRetired).equals(pristine), 'retired backup contents changed');
+  assert(fs.existsSync(path.join(res2, 'app', 'dist')), 'should unpack after retiring disabled');
+  assert(fs.existsSync(path.join(res2, 'app.asar.disabled')), 'new official asar should be renamed to disabled');
+  assert(fs.readFileSync(path.join(res2, 'app.asar.disabled')).equals(asarBuf), 'new disabled should match the new official asar');
 });
 
 test('applyToApp works after unpacking a fake asar', () => {

@@ -91,7 +91,7 @@ test('detect unpacked official app needs reapply; patched app does not', () => {
   assert(planReapply(patched).action === 'noop');
 });
 
-test('detect asar-shadows-app and disabled-asar conflict', () => {
+test('detect asar-shadows-app and asar-with-disabled needs reapply', () => {
   const { tmp, resources } = makeInstall();
   copyDir(FIXTURE, path.join(resources, 'app'));
   const files = [...collectFiles(FIXTURE), { rel: 'package.json', data: Buffer.from('{"name":"antigravity","version":"2.35.1"}\n') }];
@@ -102,11 +102,13 @@ test('detect asar-shadows-app and disabled-asar conflict', () => {
   assert(shadowed.reasons.includes('asar-shadows-app'));
 
   fs.writeFileSync(path.join(resources, 'app.asar.disabled'), Buffer.from('PRISTINE'));
-  const conflict = inspectInstall(tmp);
-  assert(conflict.layout === 'disabled-asar-conflict', conflict.layout);
-  assert(conflict.needsApply === false);
-  assert(conflict.blocked === true);
-  assert(planReapply(conflict).action === 'blocked');
+  const both = inspectInstall(tmp);
+  assert(both.layout === 'asar-with-disabled', both.layout);
+  assert(both.needsApply === true);
+  assert(both.blocked === false);
+  assert(both.reasons.includes('asar-with-disabled'));
+  assert(planReapply(both, { running: false }).action === 'apply');
+  assert(planReapply(both, { running: true }).action === 'wait-then-apply');
   assert(fs.readFileSync(path.join(resources, 'app.asar.disabled')).equals(Buffer.from('PRISTINE')));
 });
 
@@ -336,6 +338,44 @@ testAsync('runDaemon waits for a clean quit and does not apply while running', a
   });
   assert(applied === 1, 'expected apply after exit, got ' + applied);
   assert(result.lastFingerprint.length > 0);
+});
+
+
+testAsync('runDaemon integrity tick applies when filesystem events are missed', async () => {
+  let t = 0;
+  let applied = 0;
+  let layout = 'unpacked-app';
+  let stop = false;
+  const inspect = () => ({
+    appVersion: layout === 'packed-asar' ? '2.36.0' : '2.35.2',
+    layout,
+    hasApp: layout !== 'packed-asar',
+    hasAsar: layout === 'packed-asar',
+    hasDisabled: layout !== 'packed-asar',
+    asarSha256: layout === 'packed-asar' ? 'ddd' : null,
+    patched: layout !== 'packed-asar',
+    needsApply: layout === 'packed-asar',
+    blocked: false,
+    reasons: layout === 'packed-asar' ? ['packed-asar'] : [],
+  });
+  await runDaemon({
+    inspect,
+    isRunning: () => false,
+    apply: () => { applied += 1; layout = 'unpacked-app'; },
+    now: () => t,
+    sleep: async (ms) => {
+      t += ms;
+      if (applied === 0 && t >= 20 && layout !== 'packed-asar') layout = 'packed-asar';
+      if (applied >= 1 || t >= 200) stop = true;
+    },
+    debounceMs: 10,
+    integrityMs: 30,
+    pollMs: 5,
+    shouldStop: () => stop,
+    watch: async () => () => {},
+    log: () => {},
+  });
+  assert(applied === 1, 'expected integrity apply after missed event, got ' + applied);
 });
 
 export async function runWatchTests() {

@@ -74,6 +74,17 @@ export function resolveWatchDir(appDir) {
   return appDir;
 }
 
+/** Watch the install root and resources, so a replaced resources folder is still seen. */
+export function watchDirsFor(appDir) {
+  const dirs = [];
+  if (appDir) dirs.push(appDir);
+  const resources = path.join(appDir, 'resources');
+  if (fs.existsSync(resources) && path.resolve(resources) !== path.resolve(appDir)) {
+    dirs.push(resources);
+  }
+  return dirs;
+}
+
 export function shouldIgnoreWatchRel(rel) {
   const n = String(rel || '').replace(/\\/g, '/').toLowerCase();
   if (!n) return false;
@@ -96,6 +107,7 @@ export async function runDaemon(options) {
     watch,
     debounceMs = 1500,
     pollMs = 15 * 1000,
+    integrityMs = 60 * 1000,
     shouldStop = () => false,
     now = () => Date.now(),
     dryRun = false,
@@ -133,17 +145,31 @@ export async function runDaemon(options) {
 
   let pending = false;
   let lastEvent = 0;
+  let lastIntegrity = now();
+  let watchBroken = false;
   const onEvent = (rel) => {
     if (applying) return;
     if (shouldIgnoreWatchRel(rel)) return;
     pending = true;
     lastEvent = now();
   };
+  const markBroken = () => { watchBroken = true; };
 
-  const stopWatch = await watch({ onEvent });
+  const stopWatch = await watch({ onEvent, onBroken: markBroken });
+  const reattach = (typeof watch === 'function' && watch.reattach) ? watch.reattach : null;
 
   try {
     while (!shouldStop()) {
+      if (watchBroken) {
+        watchBroken = false;
+        log('watch-reattach');
+        if (typeof reattach === 'function') {
+          try { await reattach({ onEvent, onBroken: markBroken }); }
+          catch (err) { log('watch-reattach-error:' + (err && err.message ? err.message : err)); }
+        }
+        pending = true;
+        lastEvent = now() - debounceMs;
+      }
       if (pending && now() - lastEvent >= debounceMs) {
         pending = false;
         const report = inspect();
@@ -152,6 +178,14 @@ export async function runDaemon(options) {
           log('watch-unchanged');
         } else {
           await cycle('fs-change');
+        }
+      }
+      if (integrityMs > 0 && now() - lastIntegrity >= integrityMs) {
+        lastIntegrity = now();
+        const report = inspect();
+        const fp = installFingerprint(report);
+        if (fp !== lastFingerprint || report.needsApply) {
+          await cycle('integrity');
         }
       }
       await sleep(Math.min(500, debounceMs));
@@ -163,16 +197,61 @@ export async function runDaemon(options) {
   return { lastFingerprint };
 }
 
-export function attachFsWatch(dir, onEvent) {
+export function attachFsWatch(dir, onEvent, options = {}) {
   if (!dir || !fs.existsSync(dir)) return () => {};
   let closed = false;
+  const onError = typeof options.onError === 'function' ? options.onError : () => {};
   const watcher = fs.watch(dir, { recursive: true, persistent: true }, (_eventType, filename) => {
     if (closed) return;
     onEvent(filename || '');
   });
-  watcher.on('error', () => {});
+  watcher.on('error', (err) => {
+    if (closed) return;
+    onError(err);
+  });
   return () => {
     closed = true;
     try { watcher.close(); } catch { /* ignore */ }
   };
+}
+
+/**
+ * Attach watchers to a set of directories and allow later re-attach
+ * (official updates may replace the resources folder and break fs.watch).
+ */
+export function createReattachingWatch(resolveDirs, options = {}) {
+  const attach = options.attach || attachFsWatch;
+  const log = options.log || (() => {});
+  let stops = [];
+  const closeAll = () => {
+    for (const s of stops) {
+      try { s(); } catch { /* ignore */ }
+    }
+    stops = [];
+  };
+  const attachAll = ({ onEvent, onBroken }) => {
+    closeAll();
+    const dirs = [];
+    const seen = new Set();
+    for (const dir of (typeof resolveDirs === 'function' ? resolveDirs() : resolveDirs) || []) {
+      const resolved = path.resolve(dir);
+      if (seen.has(resolved) || !fs.existsSync(resolved)) continue;
+      seen.add(resolved);
+      dirs.push(resolved);
+    }
+    for (const dir of dirs) {
+      stops.push(attach(dir, onEvent, {
+        onError: (err) => {
+          log('watch-error:' + (err && err.code ? err.code : String(err)));
+          if (typeof onBroken === 'function') onBroken(err);
+        },
+      }));
+    }
+  };
+  const start = async (args) => {
+    attachAll(args);
+    return closeAll;
+  };
+  start.reattach = async (args) => attachAll(args);
+  return start;
 }

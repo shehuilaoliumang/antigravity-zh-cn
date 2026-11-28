@@ -194,8 +194,60 @@ export function mergeUnpackedDir(unpackedRoot, dest) {
 }
 
 /**
+ * Backup name for a retired app.asar.disabled. Uses version and a hash prefix;
+ * never includes user profile paths.
+ */
+export function retiredDisabledName({ version, sha256 }) {
+  const v = String(version || 'unknown').replace(/[^0-9A-Za-z.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'unknown';
+  const h = String(sha256 || 'nohash').toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 12) || 'nohash';
+  return 'app.asar.disabled-' + v + '-' + h;
+}
+
+/**
+ * Rename an existing app.asar.disabled out of the way so a newer official
+ * app.asar can be unpacked. Never deletes the only official copy; never
+ * overwrites the current disabled file in place.
+ */
+export function retireExistingDisabled({ resources, disabledPath, dryRun = false }) {
+  if (!disabledPath || !fs.existsSync(disabledPath)) return { status: 'absent' };
+  const sha256 = sha256File(disabledPath);
+  let version = 'unknown';
+  try {
+    const buf = readAsarEntry(disabledPath, 'package.json');
+    if (buf) {
+      const pkg = JSON.parse(buf.toString('utf8'));
+      const v = String(pkg && pkg.version ? pkg.version : '').trim();
+      if (v) version = v;
+    }
+  } catch {
+    // The disabled file may not be a readable asar; still back it up by hash.
+  }
+  const resourcesDir = resources || path.dirname(disabledPath);
+  let dest = path.join(resourcesDir, retiredDisabledName({ version, sha256 }));
+  let n = 2;
+  while (fs.existsSync(dest)) {
+    dest = path.join(resourcesDir, retiredDisabledName({ version, sha256 }) + '-' + n);
+    n += 1;
+    if (n > 20) {
+      const err = new Error('无法为已有的 app.asar.disabled 分配备份文件名，已停止以免丢失官方 asar。');
+      err.code = 'DISABLED_ASAR_BACKUP_NAME';
+      throw err;
+    }
+  }
+  if (dryRun) return { status: 'would-retire', dest, version, sha256 };
+  fs.renameSync(disabledPath, dest);
+  if (!fs.existsSync(dest) || fs.existsSync(disabledPath)) {
+    const err = new Error('未能把已有的 app.asar.disabled 备份到新文件名，已停止，以免丢失官方 asar。');
+    err.code = 'DISABLED_ASAR_BACKUP_FAILED';
+    throw err;
+  }
+  return { status: 'retired', dest, version, sha256 };
+}
+
+/**
  * Restore resources/app from official app.asar.
- * Never overwrites an existing app.asar.disabled.
+ * If app.asar.disabled already exists, it is renamed aside (version+hash)
+ * before the new official asar is unpacked. The retired file is never deleted.
  */
 export function ensureUnpackedApp({ appDir, dryRun = false }) {
   const resources = path.join(appDir, 'resources');
@@ -208,12 +260,6 @@ export function ensureUnpackedApp({ appDir, dryRun = false }) {
   const hasAsar = fs.existsSync(asarPath);
   const hasDisabled = fs.existsSync(disabledPath);
 
-  if (hasAsar && hasDisabled) {
-    const err = new Error('安装目录已有 app.asar.disabled，本工具不会改动该文件。请先确认安装目录布局后再试。');
-    err.code = 'DISABLED_ASAR_EXISTS';
-    throw err;
-  }
-
   if (!hasAsar && hasApp) {
     return { status: 'already-unpacked', appPath, appDir };
   }
@@ -224,7 +270,23 @@ export function ensureUnpackedApp({ appDir, dryRun = false }) {
     throw err;
   }
 
-  // Official app.asar is present and app.asar.disabled is not.
+  // Official app.asar is present. If a previous app.asar.disabled is also
+  // present, retire it to a versioned backup name first, then unpack.
+  let retired = null;
+  if (hasDisabled) {
+    retired = retireExistingDisabled({ resources, disabledPath, dryRun });
+    if (dryRun) {
+      return {
+        status: hasApp ? 'would-refresh' : 'would-unpack',
+        appPath,
+        appDir,
+        asarPath,
+        disabledPath,
+        retired,
+      };
+    }
+  }
+
   // If resources/app already exists, Electron still loads the asar, so refresh from it.
   if (dryRun) {
     return {
@@ -273,5 +335,6 @@ export function ensureUnpackedApp({ appDir, dryRun = false }) {
     appDir,
     asarPath: disabledPath,
     extractStats,
+    retired,
   };
 }

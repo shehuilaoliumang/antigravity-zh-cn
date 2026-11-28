@@ -1,8 +1,8 @@
 # Antigravity Desktop 简体中文补丁（antigravity-zh-cn）
 
-面向 **Google Antigravity Desktop 2.35.2** 的开源简体中文汉化补丁（同样适用于 2.35.1：两者除版本号外，界面资源一致）。
+面向 **Google Antigravity Desktop 2.36.0** 的开源简体中文汉化补丁（同样适用于 2.35.2 / 2.35.1：这几个版本除版本号外，界面资源一致）。
 
-> **开源出处说明**：本项目的基础词库（676 条）与部分基础菜单映射衍生自 [MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)（MIT License），在此基础上针对 2.35.0 重构了防误译隔离引擎、补齐 13 个原生壳层模块与 1591 条新词条，并已适配 2.35.1 与 2.35.2。完整版权与协议声明见下方「出处声明与致谢」、[LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+> **开源出处说明**：本项目的基础词库（676 条）与部分基础菜单映射衍生自 [MIMICTE/Antigravity-zh-CN](https://github.com/MIMICTE/Antigravity-zh-CN)（MIT License），在此基础上针对 2.35.0 重构了防误译隔离引擎、补齐 13 个原生壳层模块与 1591 条新词条，并已适配 2.35.1、2.35.2 与 2.36.0。完整版权与协议声明见下方「出处声明与致谢」、[LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 本仓库只包含词库、运行时引擎和补丁工具，**不包含**任何 Antigravity 原版代码、`app.asar` 或 Electron 二进制。所有路径都在运行时解析（Windows 默认 `%LOCALAPPDATA%\Programs\Antigravity`，也可用 `--app-dir` 指定）。
 
@@ -39,7 +39,7 @@
 
 ## 环境要求
 
-- 已安装 Antigravity Desktop 2.35.2 或 2.35.1（Windows 为主；脚本亦可指向解包后的 `resources/app`）
+- 已安装 Antigravity Desktop 2.36.0、2.35.2 或 2.35.1（Windows 为主；脚本亦可指向解包后的 `resources/app`）
 - Node.js 18+（无需安装任何 npm 依赖）
 - **写入或回滚前请先正常退出 Antigravity**。若检测到进程仍在运行，工具会拒绝写入，不会强制结束进程
 
@@ -89,15 +89,15 @@ node patch.mjs --apply --dry-run
 node patch.mjs --restore
 ```
 
-若你在运行本工具前另做了完整安装目录备份，也可以用备份手动还原 `resources\app`。本工具 **不会修改** `resources\app.asar.disabled`。
+若你在运行本工具前另做了完整安装目录备份，也可以用备份手动还原 `resources\app`。本工具不会就地覆盖已有的 `resources\app.asar.disabled`；若新的官方 asar 与它同时存在，会先把旧 disabled 文件改名为带版本和哈希的备份，再解包新的 asar。
 
 ## 官方自动更新之后
 
 在应用内执行「重启以更新」后，官方安装器通常会重新放下英文资源，补丁会被覆盖。那时只需先正常退出应用，再运行 `install.ps1` 或 `node patch.mjs --apply`。
 
-若这次更新把安装布局恢复为打包的 `resources/app.asar` 并去掉了 `resources/app`，`--apply` 会先将官方 asar 解包为 `resources/app`，再把该 asar 重命名为 `app.asar.disabled`，然后写入补丁。本工具 **不会修改** 已经存在的 `resources/app.asar.disabled`。
+若这次更新把安装布局恢复为打包的 `resources/app.asar` 并去掉了 `resources/app`，`--apply` 会先将官方 asar 解包为 `resources/app`，再把该 asar 重命名为 `app.asar.disabled`，然后写入补丁。若新的 `app.asar` 与已有 `app.asar.disabled` 同时存在，会先把旧 disabled 文件改名为 `app.asar.disabled-<版本>-<哈希>`，再解包新的官方 asar；不会删除仅有的官方副本，也不会就地覆盖旧文件。
 
-若版本已不是 2.35.2 / 2.35.1，部分原生锚点可能未命中，工具会打印统计并跳过这些项。
+若版本已不是 2.36.0 / 2.35.2 / 2.35.1，部分原生锚点可能未命中，工具会打印统计并跳过这些项。
 
 ## 更新后自动重新打补丁
 
@@ -108,8 +108,8 @@ node patch.mjs --restore
 ```
 
 - 登录时检查一次安装布局、版本 / asar 校验和以及补丁标记。不会在 Antigravity 仍在运行时写入。
-- 之后守护进程监听安装目录变化（而不是每 15 分钟轮询）。若官方更新把补丁覆盖掉，会静默等到 Antigravity 完全退出（含托盘）后再重打，以便下一次启动恢复中文。会话中途更新若立刻用英文重新打开，也会等到你完全退出后再写入。
-- 重打路径与 `node patch.mjs --apply` 相同。已有的 `app.asar.disabled` 仍不会被改动；若新的 `app.asar` 与已有 disabled 文件冲突，会记录错误并跳过，以免覆盖原始 asar。
+- 之后守护进程监听安装根目录和 `resources` 的变化（而不是每 15 分钟弹出 PowerShell 轮询）。若官方更新替换了整个 `resources` 目录导致文件监视中断，会重新挂接监视，并在进程内做低频率完整性检查，以免漏掉更新。若补丁被覆盖，会静默等到 Antigravity 完全退出（含托盘）后再重打，以便下一次启动恢复中文。会话中途更新若立刻用英文重新打开，也会等到你完全退出后再写入。
+- 重打路径与 `node patch.mjs --apply` 相同。若新的 `app.asar` 与已有 `app.asar.disabled` 同时存在，会先把旧 disabled 文件改名为带版本和哈希的备份，再解包新的官方 asar。
 - **不会结束任何进程**，也**不会关闭官方自动更新**。
 - 任务名称：`AntigravityZhCnReapply`（当前用户，登录时启动隐藏守护进程）。
 - 日志写在 `%LOCALAPPDATA%\antigravity-zh-cn\watch.log`。
@@ -135,7 +135,7 @@ Disable-ScheduledTask -TaskName AntigravityZhCnReapply
 node test/run.mjs
 ```
 
-测试覆盖：词典与正则、防误译隔离（聊天正文 / 代码块 / 输入框 / 路径）、在副本上两次 `--apply` 的幂等性、`--restore` 回滚、把自造的假 asar 解包或刷新为 `resources/app`（不会改动已有的 `app.asar.disabled`），以及更新后检测 / 等待重打与安装目录事件守护（不会结束进程）。测试夹具是自造的短锚点文件，**不含**官方源码或官方 asar。
+测试覆盖：词典与正则、防误译隔离（聊天正文 / 代码块 / 输入框 / 路径）、在副本上两次 `--apply` 的幂等性、`--restore` 回滚、把自造的假 asar 解包或刷新为 `resources/app`（已有 `app.asar.disabled` 会改名为备份后再解包），以及更新后检测 / 等待重打与安装目录事件守护（不会结束进程）。测试夹具是自造的短锚点文件，**不含**官方源码或官方 asar。
 
 ## 免责声明
 

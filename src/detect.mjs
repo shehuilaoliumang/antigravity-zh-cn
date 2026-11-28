@@ -51,7 +51,7 @@ export function inspectInstall(appDir) {
   const hasDisabled = exists(disabledPath);
 
   let layout = 'missing';
-  if (hasAsar && hasDisabled) layout = 'disabled-asar-conflict';
+  if (hasAsar && hasDisabled) layout = 'asar-with-disabled';
   else if (hasAsar && hasApp) layout = 'asar-shadows-app';
   else if (hasAsar && !hasApp) layout = 'packed-asar';
   else if (hasApp) layout = 'unpacked-app';
@@ -69,9 +69,8 @@ export function inspectInstall(appDir) {
   if (layout === 'missing') {
     reasons.push('install-missing');
     blocked = true;
-  } else if (layout === 'disabled-asar-conflict') {
-    reasons.push('disabled-asar-exists');
-    blocked = true;
+  } else if (layout === 'asar-with-disabled') {
+    reasons.push('asar-with-disabled');
   } else if (layout === 'packed-asar') {
     reasons.push('packed-asar');
   } else if (layout === 'asar-shadows-app') {
